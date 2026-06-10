@@ -15,7 +15,6 @@ from reportlab.platypus import (
 )
 from reportlab.pdfgen import canvas
 from datetime import datetime
-import io
 
 # ============================================================================
 # CONFIGURACIÓN CMC
@@ -92,11 +91,19 @@ class CMCPageTemplate(PageTemplate):
 class CMCProposalGeneratorV2:
     """Generador de propuestas con diseño profesional"""
     
-    def __init__(self, filename=None):
+    def __init__(self, filename):
         self.filename = filename
+        self.doc = SimpleDocTemplate(
+            filename,
+            pagesize=letter,
+            rightMargin=MARGIN,
+            leftMargin=MARGIN,
+            topMargin=MARGIN,
+            bottomMargin=MARGIN,
+            title='CMC Network - Propuesta Comercial'
+        )
         self.story = []
         self.styles = self._create_styles()
-        self.doc = None
     
     def _create_styles(self):
         """Estilos personalizados para CMC"""
@@ -204,20 +211,112 @@ class CMCProposalGeneratorV2:
         
         return styles
     
-    def _add_cover_page(self, executive):
-        """Portada con datos del ejecutivo"""
-        # Espaciador para centrar verticalmente
+    def generate(self, proposal_data):
+        """Genera PDF completo"""
+        self._add_cover(proposal_data)
+        self.story.append(PageBreak())
+        
+        self._add_company_info()
+        self.story.append(PageBreak())
+        
+        for i, service in enumerate(proposal_data.get('services', [])):
+            self._add_service_page(service)
+            if i < len(proposal_data.get('services', [])) - 1:
+                self.story.append(PageBreak())
+        
+        if proposal_data.get('services'):
+            self.story.append(PageBreak())
+            self._add_summary_page(proposal_data)
+        
+        self.doc.build(self.story)
+        return self.filename
+    
+    def _add_cover(self, data):
+        """Página 1: Portada con fondo oscuro"""
+        exec_info = data.get('executive', {})
+        
+        # Logo y título principal
         self.story.append(Spacer(1, 1.5*inch))
         
-        # Logo/Título principal
-        self.story.append(Paragraph(
-            "CMC Network",
+        # Nombre de empresa (pequeño)
+        logo = Paragraph(
+            "<font color='#00BCD4'><b>CMC</b></font> <font color='white'>Network</font>",
+            self.styles['CoverSubtitle']
+        )
+        self.story.append(logo)
+        
+        # Título grande
+        self.story.append(Spacer(1, 0.4*inch))
+        title = Paragraph(
+            "SOLUCIONES INTEGRALES<br/>EN TELECOMUNICACIONES",
             self.styles['CoverTitle']
+        )
+        self.story.append(title)
+        
+        # Espacio
+        self.story.append(Spacer(1, 1.2*inch))
+        
+        # Información ejecutivo
+        self.story.append(Paragraph(
+            f"<b>{exec_info.get('name', 'Executive Name')}</b>",
+            self.styles['ExecName']
+        ))
+        self.story.append(Paragraph(
+            exec_info.get('title', 'Executive Title'),
+            self.styles['ExecTitle']
+        ))
+        self.story.append(Paragraph(
+            exec_info.get('email', 'email@cmcnetworkmx.com'),
+            self.styles['ExecInfo']
+        ))
+        self.story.append(Paragraph(
+            exec_info.get('phone', '55 1234 5678'),
+            self.styles['ExecInfo']
+        ))
+    
+    def _add_company_info(self):
+        """Página 2: ¿Quiénes somos?"""
+        self.story.append(Paragraph(
+            "¿Quiénes somos?",
+            self.styles['PageTitle']
         ))
         
-        # Subtítulo
+        text = """
+        Somos una empresa líder en telecomunicaciones, con más de 30 años 
+        en el medio, concesionados por la IFT y cobertura nacional. Contamos 
+        con infraestructura propia y un equipo de expertos en diseño, integración 
+        y operación de soluciones tecnológicas, así como los mejores aliados.
+        <br/><br/>
+        Ofrecemos servicios a la medida para todo tipo de negocio, empresa o proyecto, 
+        con enfoque en alta disponibilidad, confiabilidad e innovación.
+        """
+        
+        self.story.append(Paragraph(text, self.styles['Body']))
+    
+    def _add_service_page(self, service):
+        """Página de servicio con condiciones"""
         self.story.append(Paragraph(
-< truncated lines 220-290 >
+            service.get('name', 'Servicio'),
+            self.styles['PageTitle']
+        ))
+        
+        description = service.get('description', '')
+        if description:
+            self.story.append(Paragraph(description, self.styles['Body']))
+        
+        self.story.append(Spacer(1, 0.3*inch))
+        
+        # Tabla de condiciones
+        conditions = service.get('conditions', {})
+        
+        table_data = [
+            [
+                Paragraph('Concepto', self.styles['TableHeader']),
+                Paragraph('Valor', self.styles['TableHeader'])
+            ],
+            [
+                Paragraph('Plazo del contrato', self.styles['TableValue']),
+                Paragraph(conditions.get('term', '—'), self.styles['TableValue'])
             ],
             [
                 Paragraph('Renta mensual', self.styles['TableValue']),
@@ -342,45 +441,6 @@ class CMCProposalGeneratorV2:
         self.story.append(Spacer(1, 0.4*inch))
         footer_text = "Todos los precios son + IVA. Vigencia de esta propuesta: 30 días naturales."
         self.story.append(Paragraph(footer_text, self.styles['ExecInfo']))
-    
-    def generate(self, proposal_data):
-        """Genera el PDF y retorna bytes"""
-        # Limpiar story para cada generación
-        self.story = []
-        
-        # Agregar portada
-        self._add_cover_page(proposal_data.get('executive', {}))
-        self.story.append(PageBreak())
-        
-        # Agregar página "Quiénes somos"
-        self._add_about_page()
-        self.story.append(PageBreak())
-        
-        # Agregar una página por servicio
-        services = proposal_data.get('services', [])
-        for service in services:
-            self._add_service_page(service)
-            self.story.append(PageBreak())
-        
-        # Agregar resumen económico
-        self._add_summary_page(proposal_data)
-        
-        # Generar PDF en buffer de memoria
-        pdf_buffer = io.BytesIO()
-        self.doc = SimpleDocTemplate(
-            pdf_buffer,
-            pagesize=letter,
-            rightMargin=MARGIN,
-            leftMargin=MARGIN,
-            topMargin=MARGIN,
-            bottomMargin=MARGIN,
-            title='CMC Network - Propuesta Comercial'
-        )
-        self.doc.build(self.story)
-        
-        # Retornar bytes del PDF
-        pdf_buffer.seek(0)
-        return pdf_buffer.getvalue()
 
 # ============================================================================
 # FUNCIÓN GENERADORA
@@ -389,14 +449,7 @@ class CMCProposalGeneratorV2:
 def generate_proposal(output_path, proposal_data):
     """Genera propuesta PDF"""
     generator = CMCProposalGeneratorV2(output_path)
-    pdf_bytes = generator.generate(proposal_data)
-    
-    # Si se proporciona output_path, guardar en archivo
-    if output_path:
-        with open(output_path, 'wb') as f:
-            f.write(pdf_bytes)
-    
-    return pdf_bytes
+    return generator.generate(proposal_data)
 
 # ============================================================================
 # EJEMPLO
