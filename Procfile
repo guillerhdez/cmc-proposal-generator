@@ -1,1 +1,1 @@
-web: gunicorn cmc_flask_server_render:app
+web: python cmc_flask_server_render.py
