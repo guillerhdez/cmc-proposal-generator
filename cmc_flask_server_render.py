@@ -145,10 +145,10 @@ def generate_pdf():
         
         # Generar PDF
         # Generar PDF en memoria
-pdf_buffer = io.BytesIO()
-generator = CMCProposalGeneratorV2(pdf_buffer)
-generator.generate(data)
-pdf_bytes = pdf_buffer.getvalue()
+        pdf_buffer = io.BytesIO()
+        generator = CMCProposalGeneratorV2(pdf_buffer)
+        generator.generate(data)
+        pdf_bytes = pdf_buffer.getvalue()
         
         # Crear nombre de archivo
         company_name = data['client'].get('company', 'Propuesta').replace(' ', '_')
