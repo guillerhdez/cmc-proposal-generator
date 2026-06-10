@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CMC Network - Generador de Propuestas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --dark-blue: #001F3D;
+            --cyan: #00BCD4;
+            --light-blue: #004D7A;
+            --white: #FFFFFF;
+            --light-gray: #F8F9FA;
+            --dark-gray: #333333;
+            --text-gray: #555555;
+            --border-gray: #DDDDDD;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, var(--light-gray) 0%, var(--white) 100%);
+            color: var(--dark-gray);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 0;
+            border-bottom: 3px solid var(--dark-blue);
+        }
+
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--dark-blue);
+        }
+
+        .logo-cyan {
+            color: var(--cyan);
+        }
+
+        h1 {
+            font-size: 32px;
+            color: var(--dark-blue);
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--text-gray);
+            font-size: 14px;
+        }
+
+        .form-wrapper {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+
+        .step {
+            display: none;
+        }
+
+        .step.active {
+            display: block;
+        }
+
+        .step-header {
+            background: linear-gradient(135deg, var(--dark-blue) 0%, var(--light-blue) 100%);
+            color: white;
+            padding: 20px;
+            margin: -30px -30px 30px -30px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: var(--cyan);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .step-title h2 {
+            font-size: 20px;
+            margin: 0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark-gray);
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-gray);
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="tel"]:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: var(--cyan);
+            box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .form-row.full {
+            grid-template-columns: 1fr;
+        }
+
+        .service-block {
+            background: var(--light-gray);
+            border: 1px solid var(--border-gray);
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .service-block h3 {
+            color: var(--dark-blue);
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .service-block .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
+            font-size: 13px;
+        }
+
+        .service-block input {
+            padding: 10px;
+            font-size: 13px;
+        }
+
+        .btn-remove-service {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+
+        .btn-remove-service:hover {
+            background: #ff5252;
+        }
+
+        .btn-add-service {
+            background: var(--cyan);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.3s;
+            margin-top: 15px;
+        }
+
+        .btn-add-service:hover {
+            background: #00A0C0;
+        }
+
+        .navigation {
+            display: flex;
+            gap: 15px;
+            justify-content: space-between;
+            margin-top: 30px;
+        }
+
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: var(--dark-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--light-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 31, 61, 0.2);
+        }
+
+        .btn-primary:disabled {
+            background: #CCCCCC;
+            cursor: not-allowed;
+            transform: none;
+        }
+< truncated lines 257-530 >
+</div>
+
+<div class="loading" id="loading">
+    <div class="spinner"></div>
+</div>
+
+<script>
+    // ========== VARIABLES GLOBALES ==========
+    const EXECUTIVES = {
+        'daniel_flores': { name: 'Daniel Flores', title: 'Senior Executive', email: 'dflores@cmcnetworkmx.com', phone: '55 1929 8160' },
+        'julio_ramirez': { name: 'Julio Ramírez', title: 'Sales Executive', email: 'jramirez@cmcnetworkmx.com', phone: '55 1929 5005' },
+        'tania_quijada': { name: 'Tania Quijada', title: 'Gerente Comercial', email: 'g.comercial@cmcnetworkmx.com', phone: '55 1930 6882' }
+    };
+
+    const SERVICE_TEMPLATES = {
+        'internet_dedicado': {
+            name: 'Internet Dedicado',
+            description: 'Solución ideal para empresas con alto volumen de operaciones. Con cobertura por fibra óptica y microondas, CMC Network garantiza latencias bajas y redundancia de ruta.'
+        },
+        'internet_eventos': {
+            name: 'Internet para Eventos',
+            description: 'Ideal para cubrir cualquier evento, con servicio desde 1 día.'
+        },
+        'telefonia_ip': {
+            name: 'Telefonía IP / Cloud PBX',
+            description: 'Moderniza las comunicaciones sin inversión en infraestructura. Concesionados por la IFT operamos nuestro propio PBX.'
+        },
+        'ciberseguridad': {
+            name: 'Ciberseguridad Integral',
+            description: 'Expertos en soluciones Fortinet, WatchGuard y Sophos.'
+        }
+    };
+
+    let currentStep = 1;
+    let services = [];
+
+    // ========== FUNCIONES DE NAVEGACIÓN ==========
+    function goToStep(step) {
+        if (step === 1 || validateStep(currentStep)) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById(`step${step}`).classList.add('active');
+            currentStep = step;
+            updateProgressBar();
+        }
+    }
+
+    function validateStep(step) {
+        if (step === 1) {
+            const executive = document.getElementById('executive').value;
+            const company = document.getElementById('clientCompany').value;
+            const contact = document.getElementById('clientContact').value;
+            
+            if (!executive || !company || !contact) {
+                showAlert('Por favor completa todos los campos requeridos', 'error');
+                return false;
+            }
+        }
+        
+        if (step === 2) {
+            if (services.length === 0) {
+                showAlert('Agrega al menos un servicio', 'error');
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    function updateProgressBar() {
+        const progress = (currentStep / 3) * 100;
+        document.getElementById('progressBar').style.width = progress + '%';
+    }
+
+    // ========== GESTIÓN DE SERVICIOS ==========
+    function addService() {
+        const id = Date.now();
+        const service = {
+            id,
+            name: '',
+            description: '',
+            conditions: {
+                term: '12 meses',
+                monthly_rent: '$0',
+                installation: '$0',
+                special_conditions: ''
+            }
+        };
+        
+        services.push(service);
+        renderServices();
+    }
+
+    function removeService(id) {
+        services = services.filter(s => s.id !== id);
+        renderServices();
+    }
+
+    function updateService(id, field, value) {
+        const service = services.find(s => s.id === id);
+        if (service) {
+            if (field.includes('.')) {
+                const [parent, child] = field.split('.');
+                service[parent][child] = value;
+            } else {
+                service[field] = value;
+            }
+            renderServices();
+        }
+    }
+
+    function renderServices() {
+        const container = document.getElementById('servicesContainer');
+        container.innerHTML = '';
+        
+        services.forEach((service, index) => {
+            const html = `
+                <div class="service-block">
+                    <button class="btn-remove-service" onclick="removeService(${service.id})">Eliminar</button>
+                    
+                    <h3>Servicio ${index + 1}</h3>
+                    
+                    <div class="form-group">
+                        <label>Nombre del Servicio *</label>
+                        <input type="text" value="${service.name}" 
+                               onchange="updateService(${service.id}, 'name', this.value)"
+                               placeholder="Ej: Internet Dedicado" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Descripción</label>
+                        <textarea onchange="updateService(${service.id}, 'description', this.value)"
+                                  placeholder="Descripción del servicio">${service.description}</textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Plazo</label>
+                            <input type="text" value="${service.conditions.term}" 
+                                   onchange="updateService(${service.id}, 'conditions.term', this.value)"
+                                   placeholder="Ej: 24 meses">
+                        </div>
+                        <div class="form-group">
+                            <label>Renta Mensual</label>
+                            <input type="text" value="${service.conditions.monthly_rent}" 
+                                   onchange="updateService(${service.id}, 'conditions.monthly_rent', this.value)"
+                                   placeholder="Ej: $4,500">
+                        </div>
+                        <div class="form-group">
+                            <label>Instalación</label>
+                            <input type="text" value="${service.conditions.installation}" 
+                                   onchange="updateService(${service.id}, 'conditions.installation', this.value)"
+                                   placeholder="Ej: $2,800">
+                        </div>
+                        <div class="form-group">
+                            <label>Condiciones</label>
+                            <input type="text" value="${service.conditions.special_conditions}" 
+                                   onchange="updateService(${service.id}, 'conditions.special_conditions', this.value)"
+                                   placeholder="SLA, soporte, etc.">
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.innerHTML += html;
+        });
+    }
+
+    // ========== GENERACIÓN DE PDF ==========
+    function generateAndDownloadPDF() {
+        if (!validateStep(2)) return;
+        
+        const executive = EXECUTIVES[document.getElementById('executive').value];
+        
+        const proposalData = {
+            executive: {
+                name: executive.name,
+                title: executive.title,
+                email: executive.email,
+                phone: executive.phone
+            },
+            client: {
+                company: document.getElementById('clientCompany').value,
+                contact: document.getElementById('clientContact').value,
+                whatsapp: document.getElementById('clientWhatsApp').value,
+                business: document.getElementById('clientBusiness').value
+            },
+            services: services
+        };
+        
+        showLoading(true);
+        
+        fetch('/generate-pdf', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(proposalData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.error || 'Error al generar PDF');
+                });
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            showLoading(false);
+            
+            // Crear descarga
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `CMC_Propuesta_${proposalData.client.company}_${new Date().toISOString().split('T')[0]}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            a.remove();
+            
+            showAlert('✓ PDF descargado exitosamente', 'success');
+        })
+        .catch(error => {
+            showLoading(false);
+            showAlert(`Error: ${error.message}`, 'error');
+            console.error('Error:', error);
+        });
+    }
+
+    // ========== UTILIDADES ==========
+    function showAlert(message, type) {
+        const container = document.getElementById('alertContainer');
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type} show`;
+        alert.textContent = message;
+        container.innerHTML = '';
+        container.appendChild(alert);
+        
+        if (type === 'success') {
+            setTimeout(() => alert.remove(), 5000);
+        }
+    }
+
+    function showLoading(show) {
+        document.getElementById('loading').classList.toggle('active', show);
+    }
+
+    // ========== INICIALIZACIÓN ==========
+    document.addEventListener('DOMContentLoaded', () => {
+        addService(); // Agregar un servicio inicial
+        renderServices();
+        updateProgressBar();
+    });
+</script>
+
+</body>
+</html>
