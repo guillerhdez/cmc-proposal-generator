@@ -641,6 +641,18 @@
         const container = document.getElementById('servicesContainer');
         container.innerHTML = '';
         
+        const serviceOptions = [
+            { id: 'internet_dedicado', name: 'Internet Dedicado' },
+            { id: 'internet_eventos', name: 'Internet para Eventos' },
+            { id: 'internet_satelital', name: 'Internet Satelital' },
+            { id: 'conectividad_lte', name: 'Conectividad LTE' },
+            { id: 'telefonia_ip', name: 'Telefonía IP / Cloud PBX' },
+            { id: 'ciberseguridad', name: 'Ciberseguridad Integral' },
+            { id: 'soluciones_iot', name: 'Soluciones IoT' }
+        ];
+        
+        const termOptions = ['12 meses', '24 meses', '36 meses'];
+        
         services.forEach((service, index) => {
             const html = `
                 <div class="service-block">
@@ -650,9 +662,10 @@
                     
                     <div class="form-group">
                         <label>Nombre del Servicio *</label>
-                        <input type="text" value="${service.name}" 
-                               onchange="updateService(${service.id}, 'name', this.value)"
-                               placeholder="Ej: Internet Dedicado" required>
+                        <select onchange="updateService(${service.id}, 'name', this.value)" required>
+                            <option value="">-- Selecciona un servicio --</option>
+                            ${serviceOptions.map(opt => `<option value="${opt.name}" ${service.name === opt.name ? 'selected' : ''}>${opt.name}</option>`).join('')}
+                        </select>
                     </div>
                     
                     <div class="form-group">
@@ -664,9 +677,10 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Plazo</label>
-                            <input type="text" value="${service.conditions.term}" 
-                                   onchange="updateService(${service.id}, 'conditions.term', this.value)"
-                                   placeholder="Ej: 24 meses">
+                            <select onchange="updateService(${service.id}, 'conditions.term', this.value)">
+                                <option value="">-- Selecciona plazo --</option>
+                                ${termOptions.map(opt => `<option value="${opt}" ${service.conditions.term === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                            </select>
                         </div>
                         <div class="form-group">
                             <label>Renta Mensual</label>
