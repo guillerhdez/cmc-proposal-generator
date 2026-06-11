@@ -144,7 +144,9 @@ def generate_pdf():
             return jsonify({'error': 'Client company name is required'}), 400
         
         # Generar PDF
-        generator = CMCProposalGeneratorV3(images_dir=os.path.dirname(__file__))
+        # images_dir apunta al subdirectorio 'images/' donde están las imágenes de Canva
+        images_dir = os.path.join(os.path.dirname(__file__), 'images')
+        generator = CMCProposalGeneratorV3(images_dir=images_dir)
         pdf_bytes = generator.generate(data)
         
         # Crear nombre de archivo
