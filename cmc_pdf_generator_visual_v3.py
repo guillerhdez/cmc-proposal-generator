@@ -19,6 +19,19 @@ import tempfile
 class CMCProposalGeneratorV3:
     """Generador: Canvas (imágenes + servicios) + Platypus (tabla)"""
     
+    # Mapeo de servicios a imágenes extraídas de Canva
+    SERVICE_IMAGES = {
+        'Internet Dedicado': '01-internet-dedicado.jpg',
+        'Internet para Eventos': '02-internet-eventos.jpg',
+        'Internet Satelital': '03-internet-satelital.jpg',
+        'Conectividad LTE': '04-conectividad-lte.jpg',
+        'Telefonía IP': '05-telefonia-ip.jpg',
+        'Telefonía IP / Cloud PBX': '05-telefonia-ip.jpg',
+        'Ciberseguridad Integral': '06-ciberseguridad.jpg',
+        'Soluciones IoT': '07-iot-cctv.jpg',
+        'CCTV Cableado y redes de WIFI': '07-iot-cctv.jpg',
+    }
+    
     def __init__(self, images_dir=None):
         self.images_dir = images_dir or os.path.dirname(__file__)
         self.dark_blue = HexColor('#001F3D')
@@ -56,7 +69,11 @@ class CMCProposalGeneratorV3:
         for service in services:
             c.showPage()
             
-            img_path = os.path.join(self.images_dir, '5.jpeg')
+            # Obtener imagen específica del servicio
+            service_name = service.get('name', '')
+            img_filename = self.SERVICE_IMAGES.get(service_name, '05-telefonia-ip.jpg')  # fallback
+            img_path = os.path.join(self.images_dir, img_filename)
+            
             if os.path.exists(img_path):
                 c.drawImage(img_path, 0, page_height - 8.5*inch, width=8.5*inch, height=8.5*inch)
             
