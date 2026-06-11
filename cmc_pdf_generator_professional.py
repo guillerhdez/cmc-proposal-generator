@@ -62,31 +62,31 @@ class CMCProposalGeneratorProfessional:
         story = []
         
         # ===== PÁGINA 1: PORTADA =====
-        story.append(self._create_cover_page(proposal_data))
+        story.extend(self._create_cover_page(proposal_data))
         story.append(PageBreak())
         
         # ===== PÁGINA 2: ¿QUIÉNES SOMOS? =====
-        story.append(self._create_about_page())
+        story.extend(self._create_about_page())
         story.append(PageBreak())
         
         # ===== PÁGINA 3: COBERTURA =====
-        story.append(self._create_coverage_page())
+        story.extend(self._create_coverage_page())
         story.append(PageBreak())
         
         # ===== PÁGINA 4: PORTAFOLIO =====
-        story.append(self._create_portfolio_page())
+        story.extend(self._create_portfolio_page())
         story.append(PageBreak())
         
         # ===== PÁGINAS 5+: SERVICIOS =====
         for i, service in enumerate(proposal_data.get('services', [])):
-            story.append(self._create_service_page(service, i+1))
+            story.extend(self._create_service_page(service, i+1))
             if i < len(proposal_data.get('services', [])) - 1:
                 story.append(PageBreak())
         
         story.append(PageBreak())
         
         # ===== ÚLTIMA PÁGINA: RESUMEN ECONÓMICO =====
-        story.append(self._create_summary_page(proposal_data))
+        story.extend(self._create_summary_page(proposal_data))
         
         # Compilar PDF
         doc.build(story)
