@@ -449,7 +449,7 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="executive">Ejecutivo *</label>
-                    <select id="executive" required>
+                    <select id="executive" onchange="updateExecutiveInfo()" required>
                         <option value="">Selecciona un ejecutivo...</option>
                         <option value="daniel_flores">Daniel Flores - Senior Executive</option>
                         <option value="julio_ramirez">Julio Ramírez - Sales Executive</option>
@@ -459,6 +459,17 @@
                 <div class="form-group">
                     <label for="clientCompany">Empresa Cliente *</label>
                     <input type="text" id="clientCompany" placeholder="Nombre de la empresa" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="executiveEmail">Email del Ejecutivo</label>
+                    <input type="email" id="executiveEmail" placeholder="email@cmcnetwork.com" readonly style="background: #F8F9FA; cursor: not-allowed;">
+                </div>
+                <div class="form-group">
+                    <label for="executivePhone">Teléfono del Ejecutivo</label>
+                    <input type="tel" id="executivePhone" placeholder="55 1234 5678" readonly style="background: #F8F9FA; cursor: not-allowed;">
                 </div>
             </div>
 
@@ -564,6 +575,20 @@
     let services = [];
 
     // ========== FUNCIONES DE NAVEGACIÓN ==========
+    function updateExecutiveInfo() {
+        const executiveId = document.getElementById('executive').value;
+        const emailField = document.getElementById('executiveEmail');
+        const phoneField = document.getElementById('executivePhone');
+        
+        if (executiveId && EXECUTIVES[executiveId]) {
+            emailField.value = EXECUTIVES[executiveId].email;
+            phoneField.value = EXECUTIVES[executiveId].phone;
+        } else {
+            emailField.value = '';
+            phoneField.value = '';
+        }
+    }
+    
     function goToStep(step) {
         if (step === 1 || validateStep(currentStep)) {
             document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
