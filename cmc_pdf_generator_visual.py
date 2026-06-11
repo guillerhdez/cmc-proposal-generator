@@ -112,43 +112,43 @@ class CMCProposalGeneratorVisual:
             
             # Intentar cargar fuentes
             try:
-                font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 48)
-                font_text = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 28)
-                font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 20)
+                font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32)
+                font_text = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24)
+                font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
             except:
                 font_title = ImageFont.load_default()
                 font_text = ImageFont.load_default()
                 font_small = ImageFont.load_default()
             
             executive = proposal_data.get('executive', {})
+            client = proposal_data.get('client', {})
             
-            # Superponer datos del ejecutivo (abajo a la izquierda)
-            y_start = 650
+            # Superponer datos del ejecutivo (esquina inferior izquierda)
+            x_pos = 100
+            y_start = 680
+            
             text_lines = [
-                executive.get('name', 'Ejecutivo'),
-                executive.get('title', 'Título'),
-                executive.get('email', 'email@cmcnetwork.com'),
-                executive.get('phone', '+55 1234 5678')
+                (executive.get('name', 'Ejecutivo'), font_text, self.white),
+                (executive.get('title', 'Senior Executive'), font_small, self.cyan),
+                (executive.get('email', 'email@cmcnetwork.com'), font_small, self.white),
+                (executive.get('phone', '+55 1234 5678'), font_small, self.white)
             ]
             
-            for i, line in enumerate(text_lines):
-                y_pos = y_start + (i * 45)
-                if i == 0:
-                    draw.text((80, y_pos), line, fill=self.white, font=font_text)
-                elif i == 1:
-                    draw.text((80, y_pos), line, fill=self.cyan, font=font_small)
-                else:
-                    draw.text((80, y_pos), line, fill=self.white, font=font_small)
+            for i, (line, font, color) in enumerate(text_lines):
+                y_pos = y_start + (i * 35)
+                draw.text((x_pos, y_pos), line, fill=color, font=font)
             
             # Guardar imagen modificada en buffer
             img_buffer = io.BytesIO()
-            img.save(img_buffer, format='JPEG')
+            img.save(img_buffer, format='JPEG', quality=95)
             img_buffer.seek(0)
             
             return img_buffer
             
         except Exception as e:
             print(f"Error creando portada: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def _create_servicio_page(self, service):
@@ -164,49 +164,47 @@ class CMCProposalGeneratorVisual:
             
             # Intentar cargar fuentes
             try:
-                font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 40)
-                font_text = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24)
-                font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
+                font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 36)
+                font_text = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 22)
+                font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
             except:
                 font_title = ImageFont.load_default()
                 font_text = ImageFont.load_default()
                 font_small = ImageFont.load_default()
             
-            # Superponer nombre del servicio (título)
             service_name = service.get('name', 'Servicio')
-            draw.text((100, 80), service_name, fill=self.dark_blue, font=font_title)
-            
-            # Superponer descripción/detalles
-            description = service.get('description', '')
-            draw.text((100, 150), description[:60], fill=self.text_gray, font=font_small)
-            
-            # Tabla de condiciones
             conditions = service.get('conditions', {})
-            table_y = 250
             
-            # Encabezados
-            draw.text((100, table_y), "Plazo del contrato", fill=self.dark_blue, font=font_text)
-            draw.text((700, table_y), conditions.get('term', ''), fill=self.text_gray, font=font_text)
+            # Superponer nombre del servicio (abajo de la imagen)
+            # En área blanca/clara para mejor legibilidad
+            draw.text((100, 700), service_name, fill=self.dark_blue, font=font_title)
+            
+            # Tabla de condiciones (abajo del servicio)
+            y_table = 750
+            
+            # Plazo
+            draw.text((100, y_table), "Plazo: " + conditions.get('term', '12 meses'), 
+                     fill=self.dark_blue, font=font_small)
             
             # Renta
-            table_y += 80
-            draw.text((100, table_y), "Renta mensual", fill=self.dark_blue, font=font_text)
-            draw.text((700, table_y), conditions.get('monthly_rent', ''), fill=self.text_gray, font=font_text)
+            draw.text((100, y_table + 30), "Renta: " + conditions.get('monthly_rent', '$0'), 
+                     fill=self.dark_blue, font=font_small)
             
             # Instalación
-            table_y += 80
-            draw.text((100, table_y), "Instalación / Equipo", fill=self.dark_blue, font=font_text)
-            draw.text((700, table_y), conditions.get('installation', ''), fill=self.text_gray, font=font_text)
+            draw.text((100, y_table + 60), "Instalación: " + conditions.get('installation', '$0'), 
+                     fill=self.dark_blue, font=font_small)
             
             # Guardar imagen modificada
             img_buffer = io.BytesIO()
-            img.save(img_buffer, format='JPEG')
+            img.save(img_buffer, format='JPEG', quality=95)
             img_buffer.seek(0)
             
             return img_buffer
             
         except Exception as e:
             print(f"Error creando página servicio: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def _create_resumen_page(self, proposal_data):
@@ -222,9 +220,9 @@ class CMCProposalGeneratorVisual:
             
             # Intentar cargar fuentes
             try:
-                font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 36)
-                font_text = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 20)
-                font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
+                font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28)
+                font_text = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
+                font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
             except:
                 font_title = ImageFont.load_default()
                 font_text = ImageFont.load_default()
@@ -249,41 +247,45 @@ class CMCProposalGeneratorVisual:
                 except:
                     pass
             
-            # Superponer datos (tabla de servicios)
-            y = 150
+            # Superponer tabla de servicios (en área blanca/clara)
+            y = 200
             
+            # Encabezado de tabla
+            draw.text((100, y), "SERVICIO", fill=self.dark_blue, font=font_text)
+            draw.text((600, y), "PLAZO", fill=self.dark_blue, font=font_text)
+            draw.text((900, y), "RENTA", fill=self.dark_blue, font=font_text)
+            draw.text((1150, y), "INSTALACIÓN", fill=self.dark_blue, font=font_text)
+            
+            y += 40
+            
+            # Filas de servicios
             for service in services:
                 conditions = service.get('conditions', {})
                 
-                # Nombre servicio
-                draw.text((100, y), service.get('name', ''), fill=self.dark_blue, font=font_text)
-                
-                # Plazo
-                draw.text((700, y), conditions.get('term', ''), fill=self.text_gray, font=font_small)
-                
-                # Renta
+                draw.text((100, y), service.get('name', '')[:25], fill=self.text_gray, font=font_small)
+                draw.text((600, y), conditions.get('term', ''), fill=self.text_gray, font=font_small)
                 draw.text((900, y), conditions.get('monthly_rent', ''), fill=self.text_gray, font=font_small)
+                draw.text((1150, y), conditions.get('installation', ''), fill=self.text_gray, font=font_small)
                 
-                # Instalación
-                draw.text((1200, y), conditions.get('installation', ''), fill=self.text_gray, font=font_small)
-                
-                y += 60
+                y += 35
             
             # Fila de TOTAL
-            y += 40
+            y += 20
             draw.text((100, y), "TOTAL MENSUAL", fill=self.white, font=font_title)
-            draw.text((900, y), f"${total_monthly:,.0f} MXN + IVA", fill=self.white, font=font_text)
-            draw.text((1200, y), f"${total_installation:,.0f}", fill=self.white, font=font_text)
+            draw.text((900, y), f"${total_monthly:,.0f} MXN", fill=self.white, font=font_text)
+            draw.text((1150, y), f"${total_installation:,.0f}", fill=self.white, font=font_text)
             
             # Guardar imagen modificada
             img_buffer = io.BytesIO()
-            img.save(img_buffer, format='JPEG')
+            img.save(img_buffer, format='JPEG', quality=95)
             img_buffer.seek(0)
             
             return img_buffer
             
         except Exception as e:
             print(f"Error creando página resumen: {e}")
+            import traceback
+            traceback.print_exc()
             return None
 
 
