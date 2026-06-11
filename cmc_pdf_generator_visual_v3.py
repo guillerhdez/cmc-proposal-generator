@@ -1,20 +1,23 @@
 """
-CMC Network - Generador de PDF Visual V3
-Páginas 1-4: Imágenes estáticas (portada, quiénes somos, cobertura, portafolio)
-Páginas 5+: Páginas NUEVAS con datos dinámicos del formulario
+CMC Network - Generador de PDF Visual V3 CORREGIDO
+Usa ReportLab Canvas + Platypus:
+- Páginas 1-4: Imágenes estáticas
+- Páginas 5+: Imagen 5.jpeg + texto dinámico (Canvas)
+- Última: Tabla resumen (Platypus)
 """
 
+from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Image as RLImage, PageBreak, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.colors import HexColor, white
-from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+from PyPDF2 import PdfMerger
 import io
 import os
+import tempfile
 
 class CMCProposalGeneratorV3:
-    """Generador: imágenes fijas + páginas dinámicas nuevas"""
+    """Generador: Canvas (imágenes + servicios) + Platypus (tabla)"""
     
     def __init__(self, images_dir=None):
         self.images_dir = images_dir or os.path.dirname(__file__)
@@ -22,7 +25,66 @@ class CMCProposalGeneratorV3:
         self.cyan = HexColor('#00BCD4')
     
     def generate(self, proposal_data):
-        """Genera PDF: páginas 1-4 (imágenes), 5+ (dinámicas)"""
+        """Genera PDF combinando Canvas + Platypus"""
+        
+        # Parte 1: Canvas (páginas 1-5+)
+        canvas_pdf = self._generate_canvas_pdf(proposal_data)
+        
+        # Parte 2: Platypus (tabla resumen)
+        platypus_pdf = self._generate_summary_pdf(proposal_data)
+        
+        # Combinar
+        return self._merge_pdfs(canvas_pdf, platypus_pdf)
+    
+    def _generate_canvas_pdf(self, proposal_data):
+        """Genera PDF con Canvas: imágenes + servicios"""
+        
+        pdf_buffer = io.BytesIO()
+        c = canvas.Canvas(pdf_buffer, pagesize=letter)
+        page_height = 11 * inch
+        
+        # Páginas 1-4: Imágenes estáticas
+        for i, img_file in enumerate(['1.jpeg', '2.jpeg', '3.jpeg', '4.jpeg']):
+            img_path = os.path.join(self.images_dir, img_file)
+            if os.path.exists(img_path):
+                c.drawImage(img_path, 0, page_height - 8.5*inch, width=8.5*inch, height=8.5*inch)
+            if i < 3:  # No showPage en la última
+                c.showPage()
+        
+        # Páginas 5+: Servicios
+        services = proposal_data.get('services', [])
+        for service in services:
+            c.showPage()
+            
+            img_path = os.path.join(self.images_dir, '5.jpeg')
+            if os.path.exists(img_path):
+                c.drawImage(img_path, 0, page_height - 8.5*inch, width=8.5*inch, height=8.5*inch)
+            
+            self._draw_service_on_canvas(c, service)
+        
+        c.save()
+        pdf_buffer.seek(0)
+        return pdf_buffer.getvalue()
+    
+    def _draw_service_on_canvas(self, c, service):
+        """Dibuja datos dinámicos sobre imagen 5.jpeg"""
+        
+        c.setFont('Helvetica-Bold', 12)
+        c.setFillColor(self.dark_blue)
+        
+        y_start = 2.5 * inch
+        
+        service_name = service.get('name', 'Servicio')
+        conditions = service.get('conditions', {})
+        
+        c.drawString(0.7*inch, y_start, f"Servicio: {service_name}")
+        c.setFont('Helvetica', 10)
+        c.drawString(0.7*inch, y_start - 0.25*inch, f"Plazo: {conditions.get('term', '')}")
+        c.drawString(0.7*inch, y_start - 0.5*inch, f"Renta: {conditions.get('monthly_rent', '')}")
+        c.drawString(0.7*inch, y_start - 0.75*inch, f"Instalación: {conditions.get('installation', '')}")
+    
+    def _generate_summary_pdf(self, proposal_data):
+        """Genera PDF con tabla resumen (Platypus)"""
         
         pdf_buffer = io.BytesIO()
         doc = SimpleDocTemplate(
@@ -34,109 +96,6 @@ class CMCProposalGeneratorV3:
             rightMargin=0.5*inch
         )
         
-        story = []
-        styles = getSampleStyleSheet()
-        
-        # ===== PÁGINAS 1-4: IMÁGENES ESTÁTICAS =====
-        image_files = ['1.jpeg', '2.jpeg', '3.jpeg', '4.jpeg']
-        
-        for img_file in image_files:
-            img_path = os.path.join(self.images_dir, img_file)
-            if os.path.exists(img_path):
-                story.append(RLImage(img_path, width=7.5*inch, height=4.35*inch))
-                story.append(PageBreak())
-        
-        # ===== PÁGINAS 5+: SERVICIOS DINÁMICOS =====
-        for service in proposal_data.get('services', []):
-            story.append(self._create_service_page(service, styles))
-            story.append(PageBreak())
-        
-        # ===== ÚLTIMA PÁGINA: RESUMEN DINÁMICO =====
-        story.append(self._create_summary_page(proposal_data, styles))
-        
-        # Compilar PDF
-        doc.build(story)
-        pdf_buffer.seek(0)
-        return pdf_buffer.getvalue()
-    
-    def _create_service_page(self, service, styles):
-        """Crea página de servicio con datos dinámicos"""
-        
-        story = []
-        
-        # Encabezado del servicio
-        service_name = service.get('name', 'Servicio')
-        style = ParagraphStyle(
-            'ServiceTitle',
-            parent=styles['Heading1'],
-            fontSize=24,
-            textColor=self.dark_blue,
-            spaceAfter=12,
-            fontName='Helvetica-Bold'
-        )
-        story.append(Paragraph(service_name, style))
-        
-        # Descripción
-        description = service.get('description', '')
-        if description:
-            desc_style = ParagraphStyle(
-                'Description',
-                parent=styles['Normal'],
-                fontSize=11,
-                spaceAfter=12,
-                textColor=HexColor('#555555')
-            )
-            story.append(Paragraph(description, desc_style))
-        
-        story.append(Spacer(1, 0.3*inch))
-        
-        # Tabla de condiciones
-        conditions = service.get('conditions', {})
-        
-        data = [
-            ['Plazo del contrato', conditions.get('term', '')],
-            ['Renta mensual', conditions.get('monthly_rent', '')],
-            ['Instalación / Equipo', conditions.get('installation', '')],
-            ['Condiciones especiales', service.get('notes', 'Sin condiciones especiales')]
-        ]
-        
-        table = Table(data, colWidths=[2.5*inch, 3.5*inch])
-        table.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (0, -1), self.dark_blue),
-            ('BACKGROUND', (1, 0), (1, -1), HexColor('#F0F0F0')),
-            ('TEXTCOLOR', (0, 0), (0, -1), white),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [white, HexColor('#F5F5F5')]),
-            ('GRID', (0, 0), (-1, -1), 1, HexColor('#CCCCCC')),
-            ('LEFTPADDING', (0, 0), (-1, -1), 10),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 10),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-        ]))
-        
-        story.append(table)
-        
-        return story
-    
-    def _create_summary_page(self, proposal_data, styles):
-        """Crea página de resumen con tabla de servicios"""
-        
-        story = []
-        
-        # Título
-        title_style = ParagraphStyle(
-            'SummaryTitle',
-            parent=styles['Heading1'],
-            fontSize=20,
-            textColor=self.dark_blue,
-            spaceAfter=20,
-            fontName='Helvetica-Bold'
-        )
-        story.append(Paragraph('RESUMEN ECONÓMICO CONSOLIDADO', title_style))
-        
-        # Tabla de servicios
         services = proposal_data.get('services', [])
         
         # Encabezados
@@ -174,7 +133,7 @@ class CMCProposalGeneratorV3:
                 f'${install_num:,.0f}'
             ])
         
-        # Fila de TOTAL
+        # TOTAL
         data.append([
             'TOTAL MENSUAL',
             '',
@@ -182,7 +141,7 @@ class CMCProposalGeneratorV3:
             f'${total_installation:,.0f}'
         ])
         
-        # Crear tabla
+        # Tabla
         table = Table(data, colWidths=[2*inch, 1.3*inch, 2*inch, 1.5*inch])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, 0), self.dark_blue),
@@ -201,26 +160,32 @@ class CMCProposalGeneratorV3:
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
         ]))
         
-        story.append(table)
-        story.append(Spacer(1, 0.3*inch))
+        doc.build([table])
+        pdf_buffer.seek(0)
+        return pdf_buffer.getvalue()
+    
+    def _merge_pdfs(self, pdf1_bytes, pdf2_bytes):
+        """Combina dos PDFs"""
         
-        # Nota de vigencia
-        note_style = ParagraphStyle(
-            'Note',
-            parent=styles['Normal'],
-            fontSize=9,
-            textColor=HexColor('#999999'),
-            alignment=TA_LEFT
-        )
-        story.append(Paragraph(
-            '<i>Todos los precios son + IVA. Vigencia de esta propuesta: 30 días naturales.</i>',
-            note_style
-        ))
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as f1:
+            f1.write(pdf1_bytes)
+            f1_path = f1.name
         
-        return story
-
-
-def generate_visual_pdf(proposal_data, images_dir=None):
-    """Wrapper para generar PDF desde Flask"""
-    generator = CMCProposalGeneratorV3(images_dir)
-    return generator.generate(proposal_data)
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as f2:
+            f2.write(pdf2_bytes)
+            f2_path = f2.name
+        
+        merger = PdfMerger()
+        merger.append(f1_path)
+        merger.append(f2_path)
+        
+        output = io.BytesIO()
+        merger.write(output)
+        merger.close()
+        
+        # Limpiar
+        os.unlink(f1_path)
+        os.unlink(f2_path)
+        
+        output.seek(0)
+        return output.getvalue()
