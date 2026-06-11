@@ -5,12 +5,13 @@ Superpone texto dinámico sobre imágenes JPEG base
 
 from PIL import Image, ImageDraw, ImageFont
 from reportlab.lib.pagesizes import letter
-from reportlab.lib.units import inch
+from reportlab.lib.units import inch, cm
 from reportlab.platypus import SimpleDocTemplate, Image as RLImage, PageBreak, Spacer
 from reportlab.lib.colors import HexColor
 import io
 import os
 from datetime import datetime
+from reportlab.pdfgen import canvas
 
 class CMCProposalGeneratorVisual:
     """Generador que superpone texto dinámico sobre imágenes base"""
@@ -27,12 +28,19 @@ class CMCProposalGeneratorVisual:
         self.text_gray = (85, 85, 85)
         
     def generate(self, proposal_data):
-        """Genera PDF visual exacto"""
+        """Genera PDF visual exacto - imágenes a tamaño completo"""
+        
+        # Tamaño personalizado basado en las imágenes (1456x840 píxeles)
+        # Convertir a puntos: 1456 píxeles ≈ 10.04 inches @ 145 DPI
+        custom_width = 1456 / 96 * 72  # Convertir píxeles a puntos
+        custom_height = 840 / 96 * 72   # Convertir píxeles a puntos
+        
+        page_size = (custom_width, custom_height)
         
         pdf_buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             pdf_buffer,
-            pagesize=letter,
+            pagesize=page_size,
             topMargin=0,
             bottomMargin=0,
             leftMargin=0,
@@ -44,14 +52,14 @@ class CMCProposalGeneratorVisual:
         # ===== PÁGINA 1: PORTADA (con datos dinámicos) =====
         portada = self._create_portada(proposal_data)
         if portada:
-            story.append(RLImage(portada, width=7.5*inch, height=4.35*inch))
+            story.append(RLImage(portada, width=custom_width, height=custom_height))
             story.append(PageBreak())
         
         # ===== PÁGINA 2: ¿QUIÉNES SOMOS? (estática) =====
         try:
             quienes_path = self._get_image_path('2.jpeg')
             if os.path.exists(quienes_path):
-                story.append(RLImage(quienes_path, width=7.5*inch, height=4.35*inch))
+                story.append(RLImage(quienes_path, width=custom_width, height=custom_height))
                 story.append(PageBreak())
         except:
             pass
@@ -60,7 +68,7 @@ class CMCProposalGeneratorVisual:
         try:
             cobertura_path = self._get_image_path('3.jpeg')
             if os.path.exists(cobertura_path):
-                story.append(RLImage(cobertura_path, width=7.5*inch, height=4.35*inch))
+                story.append(RLImage(cobertura_path, width=custom_width, height=custom_height))
                 story.append(PageBreak())
         except:
             pass
@@ -69,7 +77,7 @@ class CMCProposalGeneratorVisual:
         try:
             portafolio_path = self._get_image_path('4.jpeg')
             if os.path.exists(portafolio_path):
-                story.append(RLImage(portafolio_path, width=7.5*inch, height=4.35*inch))
+                story.append(RLImage(portafolio_path, width=custom_width, height=custom_height))
                 story.append(PageBreak())
         except:
             pass
@@ -78,7 +86,7 @@ class CMCProposalGeneratorVisual:
         for i, service in enumerate(proposal_data.get('services', [])):
             servicio_img = self._create_servicio_page(service)
             if servicio_img:
-                story.append(RLImage(servicio_img, width=7.5*inch, height=4.35*inch))
+                story.append(RLImage(servicio_img, width=custom_width, height=custom_height))
                 if i < len(proposal_data.get('services', [])) - 1:
                     story.append(PageBreak())
         
@@ -87,7 +95,7 @@ class CMCProposalGeneratorVisual:
         # ===== ÚLTIMA PÁGINA: RESUMEN (con datos dinámicos) =====
         resumen_img = self._create_resumen_page(proposal_data)
         if resumen_img:
-            story.append(RLImage(resumen_img, width=7.5*inch, height=4.35*inch))
+            story.append(RLImage(resumen_img, width=custom_width, height=custom_height))
         
         # Compilar PDF
         doc.build(story)
