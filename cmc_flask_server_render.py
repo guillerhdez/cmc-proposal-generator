@@ -7,7 +7,7 @@ Versión optimizada para producción en la nube.
 
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
-from cmc_pdf_generator_v2 import CMCProposalGeneratorV2
+from cmc_pdf_generator_professional import CMCProposalGeneratorProfessional
 import io
 import os
 from datetime import datetime
@@ -144,15 +144,12 @@ def generate_pdf():
             return jsonify({'error': 'Client company name is required'}), 400
         
         # Generar PDF
-        # Generar PDF en memoria
-        pdf_buffer = io.BytesIO()
-        generator = CMCProposalGeneratorV2(pdf_buffer)
-        generator.generate(data)
-        pdf_bytes = pdf_buffer.getvalue()
+        generator = CMCProposalGeneratorProfessional()
+        pdf_bytes = generator.generate(data)
         
         # Crear nombre de archivo
         company_name = data['client'].get('company', 'Propuesta').replace(' ', '_')
-        date_str = datetime.now().strftime('%Y%m%d')
+        date_str = datetime.now().strftime('%Y-%m-%d')
         filename = f'CMC_Propuesta_{company_name}_{date_str}.pdf'
         
         # Retornar PDF
