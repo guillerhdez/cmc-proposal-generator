@@ -106,43 +106,40 @@ class CMCProposalGeneratorVisual:
     def _create_portada(self, proposal_data):
         """Crea portada con datos dinámicos superpuestos"""
         try:
-            # Cargar imagen base
             base_path = self._get_image_path('1.jpeg')
             if not os.path.exists(base_path):
                 return None
             
             img = Image.open(base_path).convert('RGB')
+            width, height = img.size  # 1456 x 840
             draw = ImageDraw.Draw(img)
             
-            # Intentar cargar fuentes
             try:
-                font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32)
-                font_text = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 24)
-                font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
+                font_text = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28)
+                font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 20)
             except:
-                font_title = ImageFont.load_default()
                 font_text = ImageFont.load_default()
                 font_small = ImageFont.load_default()
             
             executive = proposal_data.get('executive', {})
-            client = proposal_data.get('client', {})
             
-            # Superponer datos del ejecutivo (esquina inferior izquierda)
-            x_pos = 100
-            y_start = 680
+            # Coordenadas en píxeles reales de la imagen (abajo a la izquierda)
+            # Imagen es 1456 x 840
+            x_pos = 80
+            y_start = 680  # Casi al final pero visible
             
-            text_lines = [
+            lines = [
                 (executive.get('name', 'Ejecutivo'), font_text, self.white),
                 (executive.get('title', 'Senior Executive'), font_small, self.cyan),
                 (executive.get('email', 'email@cmcnetwork.com'), font_small, self.white),
                 (executive.get('phone', '+55 1234 5678'), font_small, self.white)
             ]
             
-            for i, (line, font, color) in enumerate(text_lines):
-                y_pos = y_start + (i * 35)
-                draw.text((x_pos, y_pos), line, fill=color, font=font)
+            for i, (text, font, color) in enumerate(lines):
+                y = y_start + (i * 30)
+                draw.text((x_pos, y), text, fill=color, font=font)
+                print(f"Portada - {text} en ({x_pos}, {y})")
             
-            # Guardar imagen modificada en buffer
             img_buffer = io.BytesIO()
             img.save(img_buffer, format='JPEG', quality=95)
             img_buffer.seek(0)
@@ -150,7 +147,7 @@ class CMCProposalGeneratorVisual:
             return img_buffer
             
         except Exception as e:
-            print(f"Error creando portada: {e}")
+            print(f"Error portada: {e}")
             import traceback
             traceback.print_exc()
             return None
@@ -212,21 +209,20 @@ class CMCProposalGeneratorVisual:
             return None
     
     def _create_resumen_page(self, proposal_data):
-        """Crea página de resumen con datos dinámicos superpuestos"""
+        """Crea página de resumen con datos dinámicos"""
         try:
-            # Cargar imagen base (plantilla de resumen)
             base_path = self._get_image_path('6.jpeg')
             if not os.path.exists(base_path):
                 return None
             
             img = Image.open(base_path).convert('RGB')
+            width, height = img.size  # 1456 x 840
             draw = ImageDraw.Draw(img)
             
-            # Intentar cargar fuentes
             try:
-                font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 28)
-                font_text = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 18)
-                font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 14)
+                font_title = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
+                font_text = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
+                font_small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 12)
             except:
                 font_title = ImageFont.load_default()
                 font_text = ImageFont.load_default()
@@ -240,46 +236,55 @@ class CMCProposalGeneratorVisual:
             for service in services:
                 conditions = service.get('conditions', {})
                 try:
-                    rent = float(conditions.get('monthly_rent', '0').replace('$', '').replace(',', ''))
-                    total_monthly += rent
+                    rent_str = conditions.get('monthly_rent', '0').replace('$', '').replace(',', '').strip()
+                    total_monthly += float(rent_str) if rent_str else 0
                 except:
                     pass
                 
                 try:
-                    install = float(conditions.get('installation', '0').replace('$', '').replace(',', ''))
-                    total_installation += install
+                    inst_str = conditions.get('installation', '0').replace('$', '').replace(',', '').strip()
+                    total_installation += float(inst_str) if inst_str else 0
                 except:
                     pass
             
-            # Superponer tabla de servicios (en área blanca/clara)
-            y = 200
+            # Dibujar tabla en área blanca visible (superior/media)
+            y = 150
+            col1 = 100
+            col2 = 600
+            col3 = 900
+            col4 = 1150
             
-            # Encabezado de tabla
-            draw.text((100, y), "SERVICIO", fill=self.dark_blue, font=font_text)
-            draw.text((600, y), "PLAZO", fill=self.dark_blue, font=font_text)
-            draw.text((900, y), "RENTA", fill=self.dark_blue, font=font_text)
-            draw.text((1150, y), "INSTALACIÓN", fill=self.dark_blue, font=font_text)
+            # Encabezados
+            draw.text((col1, y), "SERVICIO", fill=self.dark_blue, font=font_text)
+            draw.text((col2, y), "PLAZO", fill=self.dark_blue, font=font_text)
+            draw.text((col3, y), "RENTA", fill=self.dark_blue, font=font_text)
+            draw.text((col4, y), "INSTAL.", fill=self.dark_blue, font=font_text)
             
-            y += 40
+            y += 35
             
             # Filas de servicios
             for service in services:
                 conditions = service.get('conditions', {})
                 
-                draw.text((100, y), service.get('name', '')[:25], fill=self.text_gray, font=font_small)
-                draw.text((600, y), conditions.get('term', ''), fill=self.text_gray, font=font_small)
-                draw.text((900, y), conditions.get('monthly_rent', ''), fill=self.text_gray, font=font_small)
-                draw.text((1150, y), conditions.get('installation', ''), fill=self.text_gray, font=font_small)
+                service_name = service.get('name', '')[:20]
+                term = conditions.get('term', '')
+                rent = conditions.get('monthly_rent', '')
+                install = conditions.get('installation', '')
                 
-                y += 35
+                draw.text((col1, y), service_name, fill=self.text_gray, font=font_small)
+                draw.text((col2, y), term, fill=self.text_gray, font=font_small)
+                draw.text((col3, y), rent, fill=self.text_gray, font=font_small)
+                draw.text((col4, y), install, fill=self.text_gray, font=font_small)
+                
+                y += 30
+                print(f"Resumen - {service_name}: {rent}, {install}")
             
-            # Fila de TOTAL
+            # TOTAL
             y += 20
-            draw.text((100, y), "TOTAL MENSUAL", fill=self.white, font=font_title)
-            draw.text((900, y), f"${total_monthly:,.0f} MXN", fill=self.white, font=font_text)
-            draw.text((1150, y), f"${total_installation:,.0f}", fill=self.white, font=font_text)
+            draw.text((col1, y), "TOTAL MENSUAL", fill=self.white, font=font_title)
+            draw.text((col3, y), f"${total_monthly:,.0f} MXN", fill=self.white, font=font_text)
+            draw.text((col4, y), f"${total_installation:,.0f}", fill=self.white, font=font_text)
             
-            # Guardar imagen modificada
             img_buffer = io.BytesIO()
             img.save(img_buffer, format='JPEG', quality=95)
             img_buffer.seek(0)
@@ -287,7 +292,7 @@ class CMCProposalGeneratorVisual:
             return img_buffer
             
         except Exception as e:
-            print(f"Error creando página resumen: {e}")
+            print(f"Error resumen: {e}")
             import traceback
             traceback.print_exc()
             return None
