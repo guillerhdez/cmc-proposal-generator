@@ -1,19 +1,16 @@
 """
 CMC Network - Generador de PDF Profesional
 Replica del diseño PROPUESTA_FORMAL_CMC_3.pdf
-Versión 3.0 - Con imágenes base y texto dinámico superpuesto
+Versión 3.0 - Con estructura profesional y datos dinámicos
 """
 
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.lib.units import inch, cm
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
 from reportlab.lib.colors import HexColor, black, white
-from reportlab.pdfgen import canvas
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Image as RLImage, Table, TableStyle, Spacer, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer, PageBreak
 from reportlab.lib import colors
-from PIL import Image, ImageDraw, ImageFont
 import io
-import os
 from datetime import datetime
 
 class CMCProposalGeneratorProfessional:
@@ -21,7 +18,6 @@ class CMCProposalGeneratorProfessional:
     
     def __init__(self):
         self.page_width, self.page_height = letter
-        self.images_dir = os.path.dirname(__file__)
         
         # Colores CMC
         self.dark_blue = HexColor('#001F3D')
