@@ -39,14 +39,14 @@ class Phase1Validator:
         print("-" * 50)
         
         required_files = {
-            'cmc_flask_server_render.py': 'Servidor Flask',
+            'cmc_flask_server.py': 'Servidor Flask',
             'cmc_pdf_generator_visual_v3.py': 'Generador PDF',
             'cmc-cotizador.html': 'Frontend HTML',
             'requirements.txt': 'Dependencias',
             'runtime.txt': 'Versión Python',
             'Dockerfile': 'Configuración Docker',
-            'render.yaml': 'Configuración Render',
-            'Procfile': 'Configuración Heroku/Railway'
+            'railway.json': 'Configuración Railway',
+            'Procfile': 'Configuración Railway/Heroku'
         }
         
         for filename, description in required_files.items():
@@ -88,7 +88,7 @@ class Phase1Validator:
         print("-" * 50)
         
         python_files = [
-            'cmc_flask_server_render.py',
+            'cmc_flask_server.py',
             'cmc_pdf_generator_visual_v3.py'
         ]
         
@@ -144,7 +144,7 @@ class Phase1Validator:
         print("\n🔧 CONFIGURACIÓN FLASK")
         print("-" * 50)
         
-        flask_file = os.path.join(self.project_root, 'cmc_flask_server_render.py')
+        flask_file = os.path.join(self.project_root, 'cmc_flask_server.py')
         with open(flask_file, 'r') as f:
             content = f.read()
         
@@ -173,7 +173,7 @@ class Phase1Validator:
         if "os.environ.get('PORT'" in content:
             self.log_pass("Lee PORT de variable de entorno")
         else:
-            self.log_warn("No lee PORT de variable de entorno (Render/Railway)")
+            self.log_warn("No lee PORT de variable de entorno (necesario para Railway)")
         
         # Verificar host
         if "host='0.0.0.0'" in content:
@@ -242,7 +242,7 @@ class Phase1Validator:
             ('Imagen Python 3.11', 'python:3.11'),
             ('pip install requirements', 'pip install'),
             ('Copia código', 'COPY'),
-            ('CMD Flask', 'python cmc_flask_server_render.py')
+            ('CMD Flask', 'cmc_flask_server.py')
         ]
         
         for name, text in checks:
@@ -251,36 +251,29 @@ class Phase1Validator:
             else:
                 self.log_warn(f"{name} NO encontrado")
     
-    def check_render_config(self):
-        """Verifica render.yaml"""
-        print("\n🚀 RENDER.YAML")
+    def check_railway_config(self):
+        """Verifica railway.json"""
+        print("\n🚂 RAILWAY.JSON")
         print("-" * 50)
         
-        render_file = os.path.join(self.project_root, 'render.yaml')
-        with open(render_file, 'r') as f:
+        railway_file = os.path.join(self.project_root, 'railway.json')
+        with open(railway_file, 'r') as f:
             content = f.read()
         
-        if 'pythonVersion: 3.11' in content:
-            self.log_pass("Python 3.11 configurado")
+        if '"builder": "dockerfile"' in content:
+            self.log_pass("Builder configurado (dockerfile)")
         else:
-            self.log_warn("Python 3.11 NO encontrado en render.yaml")
+            self.log_warn("Builder NO especificado")
         
-        if 'plan: free' in content:
-            self.log_warn("PLAN: free (limitado, considerar 'standard')")
-        elif 'plan: standard' in content:
-            self.log_pass("PLAN: standard (recomendado)")
-        else:
-            self.log_warn("PLAN no especificado")
-        
-        if 'pip install -r requirements.txt' in content:
-            self.log_pass("Build command configurado")
-        else:
-            self.log_fail("Build command NO configurado")
-        
-        if 'python cmc_flask_server_render.py' in content:
+        if 'python cmc_flask_server.py' in content:
             self.log_pass("Start command configurado")
         else:
             self.log_fail("Start command NO configurado")
+        
+        if '"restartPolicyType": "always"' in content:
+            self.log_pass("Restart policy configurada")
+        else:
+            self.log_warn("Restart policy NO configurada")
     
     def test_pdf_generation(self):
         """Test de generación de PDF"""
@@ -370,7 +363,7 @@ class Phase1Validator:
         self.check_pdf_generator()
         self.check_html_structure()
         self.check_docker_config()
-        self.check_render_config()
+        self.check_railway_config()
         self.test_pdf_generation()
         
         return self.generate_report()

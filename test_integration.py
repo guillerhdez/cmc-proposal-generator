@@ -49,7 +49,7 @@ class IntegrationTest:
             
             # Iniciar servidor
             self.server_process = subprocess.Popen(
-                ['python', 'cmc_flask_server_render.py'],
+                ['python', 'cmc_flask_server.py'],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True

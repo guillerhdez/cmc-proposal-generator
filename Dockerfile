@@ -25,4 +25,4 @@ RUN test -f cmc-cotizador.html && echo "✓ HTML found" || (echo "✗ HTML missi
 EXPOSE 10000
 ENV PORT=10000
 
-CMD ["python", "cmc_flask_server_render.py"]
+CMD ["python", "cmc_flask_server.py"]

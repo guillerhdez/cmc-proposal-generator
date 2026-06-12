@@ -3,7 +3,7 @@
     "builder": "dockerfile"
   },
   "deploy": {
-    "startCommand": "python cmc_flask_server_render.py",
+    "startCommand": "python cmc_flask_server.py",
     "restartPolicyType": "always",
     "restartPolicyMaxRetries": 5
   }

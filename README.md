@@ -2,21 +2,24 @@
 
 Generador automático de propuestas comerciales para CMC Network.
 
+**Producción:** https://web-production-9371f.up.railway.app/cmc-cotizador.html
+
 ## Características
 
-- 📝 Formulario web intuitivo (3 pasos)
-- 📄 Generación de PDF profesional
-- 📱 Integración con WhatsApp
+- 📝 Formulario web en 3 pasos (Ejecutivo & Cliente → Servicios → Resumen y descarga)
+- 🧾 Datos completos del cliente (contacto, direcciones) listos para integración con Odoo
+- 📄 Generación de PDF profesional con resumen de servicios y datos del cliente
+- 📱 Integración con WhatsApp (compartir propuesta directamente)
 - 🎨 Diseño responsivo
 - ⚡ Rápido y confiable
 
 ## Stack Técnico
 
 - **Frontend:** HTML5 + CSS3 + JavaScript vanilla
-- **Backend:** Flask (Python)
+- **Backend:** Flask (Python 3.11)
 - **PDF:** ReportLab + PyPDF2
-- **Cloud:** Render o Railway
-- **Próximamente:** Claude API + PostgreSQL
+- **Cloud:** Railway (Docker)
+- **Próximamente:** Claude API + PostgreSQL + integración Odoo
 
 ## Instalación Local
 
@@ -24,37 +27,36 @@ Generador automático de propuestas comerciales para CMC Network.
 git clone https://github.com/guillerhdez/cmc-proposal-generator
 cd cmc-proposal-generator
 pip install -r requirements.txt
-python cmc_flask_server_render.py
+python cmc_flask_server.py
 ```
 
 Abre http://localhost:5000/cmc-cotizador.html
 
 ## Deployment
 
-Ver `DEPLOYMENT_GUIDE.md` para instrucciones completas.
-
-### Render (Recomendado)
-1. Push a GitHub
-2. Conectar a Render
-3. Esperar deployment automático
-
-### Railway
-1. Crear proyecto desde repo
-2. Deploy automático
+Ver `DEPLOYMENT.md` para instrucciones de Railway.
 
 ## API Endpoints
 
 - `GET /health` - Health check
 - `GET /api/executives` - Lista de ejecutivos
 - `GET /api/services` - Catálogo de servicios
-- `POST /generate-pdf` - Generar PDF
+- `POST /generate-pdf` - Generar PDF de propuesta
+
+## Validación
+
+```bash
+python validate_phase1.py    # Validación estática (sintaxis, estructura, config)
+python test_integration.py   # Tests de integración (levanta el servidor y prueba endpoints)
+```
 
 ## Roadmap
 
-- [ ] Fase 1: Core ✓
-- [ ] Fase 2: Claude API (textos personalizados)
+- [x] Fase 1: Core (formulario, PDF, deploy)
+- [x] Fase 1.5: Datos completos del cliente (para Odoo)
+- [ ] Fase 2: Claude API (textos personalizados por servicio)
 - [ ] Fase 3: Base de datos + Auditoría
-- [ ] Fase 4: Integración Odoo
+- [ ] Fase 4: Integración Odoo (creación automática de contacto/oportunidad)
 
 ## Licencia
 
