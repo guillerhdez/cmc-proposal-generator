@@ -100,6 +100,10 @@ class CMCProposalGeneratorV3:
         c.drawString(0.7*inch, y_start - 0.25*inch, f"Plazo: {conditions.get('term', '')}")
         c.drawString(0.7*inch, y_start - 0.5*inch, f"Renta: {conditions.get('monthly_rent', '')}")
         c.drawString(0.7*inch, y_start - 0.75*inch, f"Instalación: {conditions.get('installation', '')}")
+        
+        coordinates = service.get('coordinates', '')
+        if coordinates:
+            c.drawString(0.7*inch, y_start - 1.0*inch, f"Coordenadas del sitio: {coordinates}")
     
     def _generate_summary_pdf(self, proposal_data):
         """Genera PDF con tabla resumen (Platypus)"""
@@ -222,6 +226,38 @@ class CMCProposalGeneratorV3:
         ]))
         
         elements.append(table)
+        
+        # ===== Tabla: Coordenadas de Instalación (si aplica) =====
+        services_with_coords = [
+            (s.get('name', ''), s.get('coordinates', ''))
+            for s in services if s.get('coordinates')
+        ]
+        
+        if services_with_coords:
+            elements.append(Spacer(1, 0.3*inch))
+            elements.append(Paragraph("Coordenadas de Instalación", title_style))
+            elements.append(Spacer(1, 0.15*inch))
+            
+            coords_data = [['SERVICIO', 'COORDENADAS']] + [
+                [name, coords] for name, coords in services_with_coords
+            ]
+            
+            coords_table = Table(coords_data, colWidths=[3*inch, 3.8*inch])
+            coords_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), self.dark_blue),
+                ('TEXTCOLOR', (0, 0), (-1, 0), white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [white, HexColor('#F5F5F5')]),
+                ('GRID', (0, 0), (-1, -1), 1, HexColor('#CCCCCC')),
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ]))
+            
+            elements.append(coords_table)
         
         doc.build(elements)
         pdf_buffer.seek(0)

@@ -641,6 +641,28 @@
                 showAlert('Agrega al menos un servicio', 'error');
                 return false;
             }
+            
+            const SERVICES_REQUIRING_COORDINATES = [
+                'Internet Dedicado',
+                'Internet Satelital',
+                'Internet para Eventos',
+                'Conectividad LTE'
+            ];
+            
+            const missingCoordinates = services.find(s =>
+                SERVICES_REQUIRING_COORDINATES.includes(s.name) && !s.coordinates?.trim()
+            );
+            
+            if (missingCoordinates) {
+                showAlert(`Falta ingresar las coordenadas del sitio para "${missingCoordinates.name}"`, 'error');
+                return false;
+            }
+            
+            const missingName = services.find(s => !s.name);
+            if (missingName) {
+                showAlert('Selecciona el nombre de cada servicio agregado', 'error');
+                return false;
+            }
         }
         
         return true;
@@ -658,6 +680,7 @@
             id,
             name: '',
             description: '',
+            coordinates: '',
             conditions: {
                 term: '12 meses',
                 monthly_rent: '$0',
@@ -702,9 +725,19 @@
             { id: 'soluciones_iot', name: 'Soluciones IoT' }
         ];
         
+        // Servicios de conectividad que requieren coordenadas del sitio de instalación
+        const SERVICES_REQUIRING_COORDINATES = [
+            'Internet Dedicado',
+            'Internet Satelital',
+            'Internet para Eventos',
+            'Conectividad LTE'
+        ];
+        
         const termOptions = ['12 meses', '24 meses', '36 meses'];
         
         services.forEach((service, index) => {
+            const needsCoordinates = SERVICES_REQUIRING_COORDINATES.includes(service.name);
+            
             const html = `
                 <div class="service-block">
                     <button class="btn-remove-service" onclick="removeService(${service.id})">Eliminar</button>
@@ -718,6 +751,20 @@
                             ${serviceOptions.map(opt => `<option value="${opt.name}" ${service.name === opt.name ? 'selected' : ''}>${opt.name}</option>`).join('')}
                         </select>
                     </div>
+                    
+                    ${needsCoordinates ? `
+                    <div class="form-group">
+                        <label>📍 Coordenadas del Sitio *</label>
+                        <input type="text" value="${service.coordinates || ''}"
+                               onchange="updateService(${service.id}, 'coordinates', this.value)"
+                               placeholder="Ej: 19.432608, -99.133209"
+                               style="${!service.coordinates ? 'border-color: var(--cyan);' : ''}">
+                        <small style="color: var(--text-gray); display: block; margin-top: 4px;">
+                            Latitud, Longitud del sitio donde se instalará el servicio.
+                            ${service.coordinates ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(service.coordinates)}" target="_blank">Ver en Google Maps →</a>` : 'Tip: en Google Maps, mantén presionado el punto exacto y copia las coordenadas.'}
+                        </small>
+                    </div>
+                    ` : ''}
                     
                     <div class="form-group">
                         <label>Descripción</label>
@@ -881,6 +928,9 @@
         } else {
             services.forEach(service => {
                 const c = service.conditions || {};
+                const coordsLine = service.coordinates
+                    ? `<br>📍 Coordenadas: <a href="https://www.google.com/maps?q=${encodeURIComponent(service.coordinates)}" target="_blank">${escapeHtml(service.coordinates)}</a>`
+                    : '';
                 html += `
                     <div class="summary-item">
                         <div class="summary-label">${escapeHtml(service.name || '')}</div>
@@ -888,6 +938,7 @@
                             Plazo: ${escapeHtml(c.term || '—')} |
                             Renta: ${escapeHtml(c.monthly_rent || '—')} |
                             Instalación: ${escapeHtml(c.installation || '—')}
+                            ${coordsLine}
                         </div>
                     </div>`;
             });

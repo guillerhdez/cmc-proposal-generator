@@ -163,6 +163,10 @@ def generate_pdf():
         
         # Log de datos del cliente (auditoría / futura integración Odoo)
         client = data['client']
+        services_summary = [
+            {'name': s.get('name'), 'coordinates': s.get('coordinates', '')}
+            for s in data.get('services', [])
+        ]
         logger.info(
             "Proposal request | company=%s | contact=%s | phone=%s | whatsapp=%s | "
             "email=%s | business=%s | fiscal_address=%s | site_address=%s | services=%s",
@@ -174,7 +178,7 @@ def generate_pdf():
             client.get('business'),
             client.get('fiscal_address'),
             client.get('site_address'),
-            [s.get('name') for s in data.get('services', [])]
+            services_summary
         )
         
         # Generar PDF
