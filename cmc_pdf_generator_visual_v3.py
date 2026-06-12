@@ -85,25 +85,68 @@ class CMCProposalGeneratorV3:
         return pdf_buffer.getvalue()
     
     def _draw_service_on_canvas(self, c, service):
-        """Dibuja datos dinámicos sobre imagen 5.jpeg"""
+        """Dibuja datos dinámicos sobre imagen del servicio"""
         
         c.setFont('Helvetica-Bold', 12)
         c.setFillColor(self.dark_blue)
         
         y_start = 2.5 * inch
+        left_margin = 0.7 * inch
         
         service_name = service.get('name', 'Servicio')
         conditions = service.get('conditions', {})
         
-        c.drawString(0.7*inch, y_start, f"Servicio: {service_name}")
+        c.drawString(left_margin, y_start, f"Servicio: {service_name}")
         c.setFont('Helvetica', 10)
-        c.drawString(0.7*inch, y_start - 0.25*inch, f"Plazo: {conditions.get('term', '')}")
-        c.drawString(0.7*inch, y_start - 0.5*inch, f"Renta: {conditions.get('monthly_rent', '')}")
-        c.drawString(0.7*inch, y_start - 0.75*inch, f"Instalación: {conditions.get('installation', '')}")
+        c.drawString(left_margin, y_start - 0.25*inch, f"Plazo: {conditions.get('term', '')}")
+        c.drawString(left_margin, y_start - 0.5*inch, f"Renta: {conditions.get('monthly_rent', '')}")
+        c.drawString(left_margin, y_start - 0.75*inch, f"Instalación: {conditions.get('installation', '')}")
+        
+        current_y = y_start - 1.0*inch
         
         coordinates = service.get('coordinates', '')
         if coordinates:
-            c.drawString(0.7*inch, y_start - 1.0*inch, f"Coordenadas del sitio: {coordinates}")
+            c.drawString(left_margin, current_y, f"Coordenadas del sitio: {coordinates}")
+            current_y -= 0.25*inch
+        
+        # Descripción del servicio (con salto de línea automático)
+        description = (service.get('description') or '').strip()
+        if description:
+            current_y -= 0.05*inch
+            c.setFont('Helvetica-Bold', 10)
+            c.drawString(left_margin, current_y, "Descripción:")
+            current_y -= 0.18*inch
+            
+            c.setFont('Helvetica', 9)
+            max_width = 7.1 * inch  # ancho útil (8.5in - márgenes)
+            line_height = 0.16 * inch
+            min_y = 0.3 * inch  # margen inferior de la página
+            
+            for line in self._wrap_text(c, description, 'Helvetica', 9, max_width):
+                if current_y < min_y:
+                    break  # evitar dibujar fuera de la página
+                c.drawString(left_margin, current_y, line)
+                current_y -= line_height
+    
+    def _wrap_text(self, c, text, font_name, font_size, max_width):
+        """Divide un texto en líneas que caben dentro de max_width"""
+        words = text.split()
+        lines = []
+        current_line = ''
+        
+        for word in words:
+            test_line = f"{current_line} {word}".strip()
+            if c.stringWidth(test_line, font_name, font_size) <= max_width:
+                current_line = test_line
+            else:
+                if current_line:
+                    lines.append(current_line)
+                current_line = word
+        
+        if current_line:
+            lines.append(current_line)
+        
+        return lines
     
     def _generate_summary_pdf(self, proposal_data):
         """Genera PDF con tabla resumen (Platypus)"""
