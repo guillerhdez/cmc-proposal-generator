@@ -134,7 +134,16 @@ def generate_pdf():
     Body esperado:
     {
         "executive": {"name": "...", "title": "...", "email": "...", "phone": "..."},
-        "client": {"company": "...", "contact": "...", "whatsapp": "..."},
+        "client": {
+            "company": "...",
+            "contact": "...",
+            "phone": "...",
+            "whatsapp": "...",
+            "email": "...",
+            "business": "...",
+            "fiscal_address": "...",
+            "site_address": "..."
+        },
         "services": [{"name": "...", "description": "...", "conditions": {...}}]
     }
     """
@@ -151,6 +160,22 @@ def generate_pdf():
         # Validar cliente
         if not data['client'].get('company'):
             return jsonify({'error': 'Client company name is required'}), 400
+        
+        # Log de datos del cliente (auditoría / futura integración Odoo)
+        client = data['client']
+        logger.info(
+            "Proposal request | company=%s | contact=%s | phone=%s | whatsapp=%s | "
+            "email=%s | business=%s | fiscal_address=%s | site_address=%s | services=%s",
+            client.get('company'),
+            client.get('contact'),
+            client.get('phone'),
+            client.get('whatsapp'),
+            client.get('email'),
+            client.get('business'),
+            client.get('fiscal_address'),
+            client.get('site_address'),
+            [s.get('name') for s in data.get('services', [])]
+        )
         
         # Generar PDF
         # images_dir apunta al subdirectorio 'images/' donde están las imágenes de Canva
@@ -172,7 +197,7 @@ def generate_pdf():
         )
         
     except Exception as e:
-        print(f"Error generating PDF: {str(e)}")
+        logger.error(f"Error generating PDF: {str(e)}")
         return jsonify({'error': f'Error generating PDF: {str(e)}'}), 500
 
 @app.route('/cmc-cotizador.html', methods=['GET'])

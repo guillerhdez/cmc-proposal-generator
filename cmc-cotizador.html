@@ -457,7 +457,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="clientCompany">Empresa Cliente *</label>
+                    <label for="clientCompany">Nombre Empresa *</label>
                     <input type="text" id="clientCompany" placeholder="Nombre de la empresa" required>
                 </div>
             </div>
@@ -475,18 +475,39 @@
 
             <div class="form-row">
                 <div class="form-group">
-                    <label for="clientContact">Contacto *</label>
+                    <label for="clientContact">Nombre Contacto *</label>
                     <input type="text" id="clientContact" placeholder="Nombre del contacto" required>
                 </div>
                 <div class="form-group">
-                    <label for="clientWhatsApp">WhatsApp</label>
+                    <label for="clientBusiness">Giro de Negocio</label>
+                    <input type="text" id="clientBusiness" placeholder="Ej: Manufactura, Retail, etc.">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="clientPhone">Teléfono Contacto</label>
+                    <input type="tel" id="clientPhone" placeholder="55 1234 5678">
+                </div>
+                <div class="form-group">
+                    <label for="clientWhatsApp">Celular Contacto (WhatsApp)</label>
                     <input type="tel" id="clientWhatsApp" placeholder="5512345678">
                 </div>
             </div>
 
             <div class="form-group">
-                <label for="clientBusiness">Giro de Negocio</label>
-                <input type="text" id="clientBusiness" placeholder="Ej: Manufactura, Retail, etc.">
+                <label for="clientEmail">Correo Contacto</label>
+                <input type="email" id="clientEmail" placeholder="contacto@empresa.com">
+            </div>
+
+            <div class="form-group">
+                <label for="clientFiscalAddress">Dirección Fiscal</label>
+                <textarea id="clientFiscalAddress" placeholder="Calle, número, colonia, ciudad, estado, C.P." rows="2"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="clientSiteAddress">Dirección del Sitio (instalación)</label>
+                <textarea id="clientSiteAddress" placeholder="Si es diferente a la dirección fiscal. Calle, número, colonia, ciudad, estado, C.P." rows="2"></textarea>
             </div>
 
             <div class="navigation">
@@ -596,6 +617,10 @@
             document.getElementById(`step${step}`).classList.add('active');
             currentStep = step;
             updateProgressBar();
+            
+            if (step === 3) {
+                renderSummary();
+            }
         }
     }
 
@@ -749,8 +774,12 @@
             client: {
                 company: document.getElementById('clientCompany').value,
                 contact: document.getElementById('clientContact').value,
+                phone: document.getElementById('clientPhone').value,
                 whatsapp: document.getElementById('clientWhatsApp').value,
-                business: document.getElementById('clientBusiness').value
+                email: document.getElementById('clientEmail').value,
+                business: document.getElementById('clientBusiness').value,
+                fiscal_address: document.getElementById('clientFiscalAddress').value,
+                site_address: document.getElementById('clientSiteAddress').value
             },
             services: services
         };
@@ -810,6 +839,67 @@
 
     function showLoading(show) {
         document.getElementById('loading').classList.toggle('active', show);
+    }
+
+    function renderSummary() {
+        const executiveId = document.getElementById('executive').value;
+        const executive = EXECUTIVES[executiveId] || {};
+
+        const company = document.getElementById('clientCompany').value;
+        const contact = document.getElementById('clientContact').value;
+        const phone = document.getElementById('clientPhone').value;
+        const whatsapp = document.getElementById('clientWhatsApp').value;
+        const email = document.getElementById('clientEmail').value;
+        const business = document.getElementById('clientBusiness').value;
+        const fiscalAddress = document.getElementById('clientFiscalAddress').value;
+        const siteAddress = document.getElementById('clientSiteAddress').value;
+
+        const fields = [
+            ['Ejecutivo', `${executive.name || ''} (${executive.title || ''})`],
+            ['Empresa', company],
+            ['Nombre Contacto', contact],
+            ['Giro de Negocio', business || '—'],
+            ['Teléfono Contacto', phone || '—'],
+            ['Celular / WhatsApp', whatsapp || '—'],
+            ['Correo Contacto', email || '—'],
+            ['Dirección Fiscal', fiscalAddress || '—'],
+            ['Dirección del Sitio', siteAddress || fiscalAddress || '—']
+        ];
+
+        let html = '<h3>📋 Datos del Cliente</h3>';
+        fields.forEach(([label, value]) => {
+            html += `
+                <div class="summary-item">
+                    <div class="summary-label">${label}</div>
+                    <div class="summary-value">${escapeHtml(value)}</div>
+                </div>`;
+        });
+
+        html += '<h3 style="margin-top: 25px;">🛠️ Servicios Cotizados</h3>';
+        if (services.length === 0) {
+            html += '<div class="summary-item"><div class="summary-value">Sin servicios agregados</div></div>';
+        } else {
+            services.forEach(service => {
+                const c = service.conditions || {};
+                html += `
+                    <div class="summary-item">
+                        <div class="summary-label">${escapeHtml(service.name || '')}</div>
+                        <div class="summary-value">
+                            Plazo: ${escapeHtml(c.term || '—')} |
+                            Renta: ${escapeHtml(c.monthly_rent || '—')} |
+                            Instalación: ${escapeHtml(c.installation || '—')}
+                        </div>
+                    </div>`;
+            });
+        }
+
+        document.getElementById('summaryContainer').innerHTML = html;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text || '';
+        return div.innerHTML;
     }
 
     function shareViaWhatsApp() {

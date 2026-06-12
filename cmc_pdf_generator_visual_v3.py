@@ -8,7 +8,8 @@ Usa ReportLab Canvas + Platypus:
 
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.lib.colors import HexColor, white
 from PyPDF2 import PdfMerger
@@ -114,8 +115,51 @@ class CMCProposalGeneratorV3:
         )
         
         services = proposal_data.get('services', [])
+        client = proposal_data.get('client', {})
         
-        # Encabezados
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # ===== Tabla: Datos del Cliente =====
+        title_style = styles['Heading2']
+        title_style.textColor = self.dark_blue
+        elements.append(Paragraph("Datos del Cliente", title_style))
+        elements.append(Spacer(1, 0.15*inch))
+        
+        client_fields = [
+            ('Empresa', client.get('company', '')),
+            ('Contacto', client.get('contact', '')),
+            ('Giro de Negocio', client.get('business', '')),
+            ('Teléfono', client.get('phone', '')),
+            ('Celular / WhatsApp', client.get('whatsapp', '')),
+            ('Correo', client.get('email', '')),
+            ('Dirección Fiscal', client.get('fiscal_address', '')),
+            ('Dirección del Sitio', client.get('site_address', '') or client.get('fiscal_address', '')),
+        ]
+        
+        client_data = [[label, value or '—'] for label, value in client_fields]
+        
+        client_table = Table(client_data, colWidths=[1.8*inch, 5*inch])
+        client_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), HexColor('#F0F4F8')),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('GRID', (0, 0), (-1, -1), 1, HexColor('#CCCCCC')),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        
+        elements.append(client_table)
+        elements.append(Spacer(1, 0.3*inch))
+        
+        # ===== Tabla: Servicios =====
+        elements.append(Paragraph("Resumen de Servicios", title_style))
+        elements.append(Spacer(1, 0.15*inch))
+        
         data = [['SERVICIO', 'PLAZO', 'RENTA MENSUAL (MXN)', 'INSTALACIÓN']]
         
         total_monthly = 0
@@ -177,7 +221,9 @@ class CMCProposalGeneratorV3:
             ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
         ]))
         
-        doc.build([table])
+        elements.append(table)
+        
+        doc.build(elements)
         pdf_buffer.seek(0)
         return pdf_buffer.getvalue()
     
