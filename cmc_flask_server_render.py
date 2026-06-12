@@ -11,6 +11,15 @@ from cmc_pdf_generator_visual_v3 import CMCProposalGeneratorV3
 import io
 import os
 from datetime import datetime
+import logging
+
+
+# Configurar logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)

@@ -1,0 +1,10 @@
+{
+  "build": {
+    "builder": "dockerfile"
+  },
+  "deploy": {
+    "startCommand": "python cmc_flask_server_render.py",
+    "restartPolicyType": "always",
+    "restartPolicyMaxRetries": 5
+  }
+}

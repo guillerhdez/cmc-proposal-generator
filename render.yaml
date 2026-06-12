@@ -2,7 +2,7 @@ services:
   - type: web
     name: cmc-proposal-generator
     env: python
-    plan: free
+    plan: standard
     buildCommand: pip install -r requirements.txt
     startCommand: python cmc_flask_server_render.py
     pythonVersion: 3.11
