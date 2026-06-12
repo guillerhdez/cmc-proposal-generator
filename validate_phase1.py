@@ -110,7 +110,6 @@ class Phase1Validator:
             ('flask', 'Flask'),
             ('flask_cors', 'Flask-CORS'),
             ('reportlab', 'ReportLab'),
-            ('PyPDF2', 'PyPDF2'),
             ('requests', 'requests'),
             ('werkzeug', 'Werkzeug'),
             ('jinja2', 'Jinja2')
@@ -192,11 +191,13 @@ class Phase1Validator:
         
         checks = [
             ('Canvas', 'from reportlab.pdfgen import canvas'),
-            ('Platypus', 'from reportlab.platypus import'),
-            ('PdfMerger', 'from PyPDF2 import PdfMerger'),
+            ('Platypus (Table)', 'from reportlab.platypus import'),
+            ('Landscape', 'landscape'),
             ('Clase principal', 'class CMCProposalGeneratorV3'),
             ('Método generate', 'def generate(self, proposal_data)'),
-            ('Método merge', 'def _merge_pdfs')
+            ('Imagen cover', 'def _draw_cover_image'),
+            ('Página de servicio', 'def _draw_service_page'),
+            ('Página de resumen', 'def _draw_summary_page'),
         ]
         
         for name, code in checks:
