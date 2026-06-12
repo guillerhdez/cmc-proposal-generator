@@ -10,8 +10,10 @@ from flask_cors import CORS
 from cmc_pdf_generator_visual_v3 import CMCProposalGeneratorV3
 import io
 import os
+import re
 from datetime import datetime
 import logging
+import requests
 
 
 # Configurar logging
@@ -126,6 +128,55 @@ def get_services():
     """Retorna catálogo de servicios"""
     return jsonify(SERVICES), 200
 
+@app.route('/api/postal-code/<cp>', methods=['GET'])
+def get_postal_code_info(cp):
+    """
+    Proxy a la API de SEPOMEX para obtener Colonia(s)/Municipio/Estado
+    a partir de un código postal mexicano. Evita CORS desde el navegador.
+
+    Respuesta:
+    {
+        "found": true,
+        "zip_code": "01000",
+        "state": "Ciudad de México",
+        "municipality": "Álvaro Obregón",
+        "neighborhoods": ["San Ángel", "San Ángel Inn", ...]
+    }
+    """
+    cp = (cp or '').strip()
+
+    if not re.fullmatch(r'\d{5}', cp):
+        return jsonify({'found': False, 'error': 'invalid_format', 'message': 'El código postal debe tener 5 dígitos'}), 400
+
+    try:
+        response = requests.get(
+            'https://sepomex.icalialabs.com/api/v1/zip_codes',
+            params={'zip_code': cp},
+            timeout=5
+        )
+        response.raise_for_status()
+        data = response.json()
+        zip_codes = data.get('zip_codes', [])
+
+        if not zip_codes:
+            return jsonify({'found': False, 'zip_code': cp, 'message': 'Código postal no encontrado'}), 200
+
+        state = zip_codes[0].get('d_estado', '')
+        municipality = zip_codes[0].get('d_mnpio', '')
+        neighborhoods = sorted({z.get('d_asenta', '') for z in zip_codes if z.get('d_asenta')})
+
+        return jsonify({
+            'found': True,
+            'zip_code': cp,
+            'state': state,
+            'municipality': municipality,
+            'neighborhoods': neighborhoods
+        }), 200
+
+    except requests.exceptions.RequestException as e:
+        logger.warning(f"Postal code lookup failed for {cp}: {str(e)}")
+        return jsonify({'found': False, 'zip_code': cp, 'error': 'lookup_failed', 'message': 'No se pudo consultar el código postal'}), 200
+
 @app.route('/generate-pdf', methods=['POST'])
 def generate_pdf():
     """
@@ -169,7 +220,8 @@ def generate_pdf():
         ]
         logger.info(
             "Proposal request | company=%s | contact=%s | phone=%s | whatsapp=%s | "
-            "email=%s | business=%s | fiscal_address=%s | site_address=%s | services=%s",
+            "email=%s | business=%s | fiscal_address=%s | site_address=%s | "
+            "fiscal_address_structured=%s | site_address_structured=%s | services=%s",
             client.get('company'),
             client.get('contact'),
             client.get('phone'),
@@ -178,6 +230,8 @@ def generate_pdf():
             client.get('business'),
             client.get('fiscal_address'),
             client.get('site_address'),
+            client.get('fiscal_address_structured'),
+            client.get('site_address_structured'),
             services_summary
         )
         

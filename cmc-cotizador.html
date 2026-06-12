@@ -159,6 +159,55 @@
             grid-template-columns: 1fr;
         }
 
+        .address-block {
+            background: var(--light-gray);
+            border: 1px solid var(--border-gray);
+            border-radius: 6px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .address-block h4 {
+            margin: 0 0 14px 0;
+            font-size: 14px;
+            color: var(--dark-blue);
+        }
+
+        .zip-status {
+            display: block;
+            margin-top: 4px;
+            font-size: 12px;
+            min-height: 16px;
+        }
+
+        .zip-status.loading { color: var(--text-gray); }
+        .zip-status.success { color: #2E7D32; }
+        .zip-status.error { color: #C62828; }
+
+        input[readonly] {
+            background: #F8F9FA;
+            cursor: not-allowed;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            cursor: pointer;
+        }
+
+        .checkbox-row input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .checkbox-row span {
+            font-weight: 500;
+            color: var(--dark-gray);
+        }
+
         .service-block {
             background: var(--light-gray);
             border: 1px solid var(--border-gray);
@@ -500,14 +549,105 @@
                 <input type="email" id="clientEmail" placeholder="contacto@empresa.com">
             </div>
 
-            <div class="form-group">
-                <label for="clientFiscalAddress">Dirección Fiscal</label>
-                <textarea id="clientFiscalAddress" placeholder="Calle, número, colonia, ciudad, estado, C.P." rows="2"></textarea>
+            <div class="address-block">
+                <h4>📍 Dirección Fiscal</h4>
+
+                <div class="form-group">
+                    <label for="fiscalStreet">Calle</label>
+                    <input type="text" id="fiscalStreet" placeholder="Nombre de la calle">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fiscalExtNumber">Núm. Ext</label>
+                        <input type="text" id="fiscalExtNumber" placeholder="123">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalIntNumber">Núm. Int</label>
+                        <input type="text" id="fiscalIntNumber" placeholder="Opcional">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fiscalZip">Código Postal</label>
+                        <input type="text" id="fiscalZip" placeholder="00000" maxlength="5" inputmode="numeric"
+                               oninput="onZipCodeInput('fiscal', this.value)">
+                        <small class="zip-status" id="fiscalZipStatus"></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalNeighborhood">Colonia</label>
+                        <select id="fiscalNeighborhood" disabled onchange="onNeighborhoodSelectChange('fiscal')">
+                            <option value="">-- Ingresa el C.P. primero --</option>
+                        </select>
+                        <input type="text" id="fiscalNeighborhoodOther" placeholder="Escribe la colonia"
+                               style="display: none; margin-top: 8px;" onchange="checkAddressConsistency('fiscal')">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="fiscalMunicipality">Municipio/Alcaldía</label>
+                        <input type="text" id="fiscalMunicipality" placeholder="Se completa con el C.P." onchange="checkAddressConsistency('fiscal')">
+                    </div>
+                    <div class="form-group">
+                        <label for="fiscalState">Estado</label>
+                        <input type="text" id="fiscalState" placeholder="Se completa con el C.P." onchange="checkAddressConsistency('fiscal')">
+                    </div>
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="clientSiteAddress">Dirección del Sitio (instalación)</label>
-                <textarea id="clientSiteAddress" placeholder="Si es diferente a la dirección fiscal. Calle, número, colonia, ciudad, estado, C.P." rows="2"></textarea>
+            <label class="checkbox-row" for="siteSameAsFiscal">
+                <input type="checkbox" id="siteSameAsFiscal" checked onchange="toggleSiteAddress()">
+                <span>La dirección del sitio (instalación) es la misma que la fiscal</span>
+            </label>
+
+            <div class="address-block" id="siteAddressBlock" style="display: none;">
+                <h4>📍 Dirección del Sitio (instalación)</h4>
+
+                <div class="form-group">
+                    <label for="siteStreet">Calle</label>
+                    <input type="text" id="siteStreet" placeholder="Nombre de la calle">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="siteExtNumber">Núm. Ext</label>
+                        <input type="text" id="siteExtNumber" placeholder="123">
+                    </div>
+                    <div class="form-group">
+                        <label for="siteIntNumber">Núm. Int</label>
+                        <input type="text" id="siteIntNumber" placeholder="Opcional">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="siteZip">Código Postal</label>
+                        <input type="text" id="siteZip" placeholder="00000" maxlength="5" inputmode="numeric"
+                               oninput="onZipCodeInput('site', this.value)">
+                        <small class="zip-status" id="siteZipStatus"></small>
+                    </div>
+                    <div class="form-group">
+                        <label for="siteNeighborhood">Colonia</label>
+                        <select id="siteNeighborhood" disabled onchange="onNeighborhoodSelectChange('site')">
+                            <option value="">-- Ingresa el C.P. primero --</option>
+                        </select>
+                        <input type="text" id="siteNeighborhoodOther" placeholder="Escribe la colonia"
+                               style="display: none; margin-top: 8px;" onchange="checkAddressConsistency('site')">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="siteMunicipality">Municipio/Alcaldía</label>
+                        <input type="text" id="siteMunicipality" placeholder="Se completa con el C.P." onchange="checkAddressConsistency('site')">
+                    </div>
+                    <div class="form-group">
+                        <label for="siteState">Estado</label>
+                        <input type="text" id="siteState" placeholder="Se completa con el C.P." onchange="checkAddressConsistency('site')">
+                    </div>
+                </div>
             </div>
 
             <div class="navigation">
@@ -611,6 +751,175 @@
         }
     }
     
+    // ========== DIRECCIONES (Fiscal / Sitio) ==========
+
+    let zipLookupTimers = {};
+
+    function toggleSiteAddress() {
+        const same = document.getElementById('siteSameAsFiscal').checked;
+        document.getElementById('siteAddressBlock').style.display = same ? 'none' : 'block';
+    }
+
+    function onZipCodeInput(prefix, value) {
+        const cp = value.replace(/\D/g, '').slice(0, 5);
+        const zipInput = document.getElementById(`${prefix}Zip`);
+        if (zipInput.value !== cp) zipInput.value = cp;
+
+        const status = document.getElementById(`${prefix}ZipStatus`);
+        const select = document.getElementById(`${prefix}Neighborhood`);
+        const otherInput = document.getElementById(`${prefix}NeighborhoodOther`);
+        const muniInput = document.getElementById(`${prefix}Municipality`);
+        const stateInput = document.getElementById(`${prefix}State`);
+
+        clearTimeout(zipLookupTimers[prefix]);
+
+        if (cp.length !== 5) {
+            status.textContent = '';
+            status.className = 'zip-status';
+            return;
+        }
+
+        status.textContent = 'Buscando...';
+        status.className = 'zip-status loading';
+
+        zipLookupTimers[prefix] = setTimeout(async () => {
+            try {
+                const res = await fetch(`/api/postal-code/${cp}`);
+                const data = await res.json();
+
+                if (data.found) {
+                    muniInput.value = data.municipality;
+                    stateInput.value = data.state;
+                    muniInput.dataset.cpMunicipality = data.municipality;
+                    stateInput.dataset.cpState = data.state;
+
+                    select.innerHTML = '';
+                    if (data.neighborhoods.length > 1) {
+                        select.innerHTML = '<option value="">-- Selecciona la colonia --</option>';
+                    }
+                    data.neighborhoods.forEach(n => {
+                        const opt = document.createElement('option');
+                        opt.value = n;
+                        opt.textContent = n;
+                        select.appendChild(opt);
+                    });
+                    const otherOpt = document.createElement('option');
+                    otherOpt.value = '__other__';
+                    otherOpt.textContent = 'Otra colonia (escribir)';
+                    select.appendChild(otherOpt);
+
+                    select.disabled = false;
+                    otherInput.style.display = 'none';
+                    otherInput.value = '';
+
+                    if (data.neighborhoods.length === 1) {
+                        select.value = data.neighborhoods[0];
+                    }
+
+                    const colCount = data.neighborhoods.length > 1 ? ` — ${data.neighborhoods.length} colonias encontradas` : '';
+                    status.textContent = `✓ ${data.municipality}, ${data.state}${colCount}`;
+                    status.className = 'zip-status success';
+                } else {
+                    delete muniInput.dataset.cpMunicipality;
+                    delete stateInput.dataset.cpState;
+
+                    select.innerHTML = '<option value="__other__">-- Escribe la colonia manualmente --</option>';
+                    select.value = '__other__';
+                    select.disabled = true;
+                    otherInput.style.display = 'block';
+
+                    status.textContent = data.message || 'No se encontró el código postal. Completa los datos manualmente.';
+                    status.className = 'zip-status error';
+                }
+            } catch (err) {
+                delete muniInput.dataset.cpMunicipality;
+                delete stateInput.dataset.cpState;
+
+                select.innerHTML = '<option value="__other__">-- Escribe la colonia manualmente --</option>';
+                select.value = '__other__';
+                select.disabled = true;
+                otherInput.style.display = 'block';
+
+                status.textContent = 'No se pudo verificar el código postal. Completa los datos manualmente.';
+                status.className = 'zip-status error';
+            }
+        }, 400);
+    }
+
+    function onNeighborhoodSelectChange(prefix) {
+        const select = document.getElementById(`${prefix}Neighborhood`);
+        const otherInput = document.getElementById(`${prefix}NeighborhoodOther`);
+        otherInput.style.display = select.value === '__other__' ? 'block' : 'none';
+    }
+
+    function checkAddressConsistency(prefix) {
+        const status = document.getElementById(`${prefix}ZipStatus`);
+        const muniInput = document.getElementById(`${prefix}Municipality`);
+        const stateInput = document.getElementById(`${prefix}State`);
+
+        const expectedMuni = muniInput.dataset.cpMunicipality;
+        const expectedState = stateInput.dataset.cpState;
+
+        if (!expectedMuni) return; // sin referencia del C.P., no se puede comparar
+
+        const matches = muniInput.value.trim() === expectedMuni && stateInput.value.trim() === expectedState;
+
+        if (matches) {
+            status.textContent = `✓ ${expectedMuni}, ${expectedState}`;
+            status.className = 'zip-status success';
+        } else {
+            status.textContent = '⚠️ Municipio/Estado no coincide con el C.P. ingresado';
+            status.className = 'zip-status error';
+        }
+    }
+
+    function getNeighborhoodValue(prefix) {
+        const select = document.getElementById(`${prefix}Neighborhood`);
+        if (select.value === '__other__') {
+            return document.getElementById(`${prefix}NeighborhoodOther`).value.trim();
+        }
+        return select.value;
+    }
+
+    function buildAddress(prefix) {
+        return {
+            street: document.getElementById(`${prefix}Street`).value.trim(),
+            ext_number: document.getElementById(`${prefix}ExtNumber`).value.trim(),
+            int_number: document.getElementById(`${prefix}IntNumber`).value.trim(),
+            neighborhood: getNeighborhoodValue(prefix),
+            municipality: document.getElementById(`${prefix}Municipality`).value.trim(),
+            state: document.getElementById(`${prefix}State`).value.trim(),
+            zip_code: document.getElementById(`${prefix}Zip`).value.trim()
+        };
+    }
+
+    function formatAddress(addr) {
+        if (!addr) return '';
+
+        let streetLine = addr.street || '';
+        if (addr.ext_number) streetLine += ` ${addr.ext_number}`;
+        if (addr.int_number) streetLine += `, Int. ${addr.int_number}`;
+
+        const parts = [
+            streetLine,
+            addr.neighborhood,
+            addr.municipality,
+            addr.state,
+            addr.zip_code ? `C.P. ${addr.zip_code}` : ''
+        ];
+
+        return parts.filter(Boolean).join(', ');
+    }
+
+    function getFiscalAddress() {
+        return buildAddress('fiscal');
+    }
+
+    function getSiteAddress() {
+        const same = document.getElementById('siteSameAsFiscal').checked;
+        return same ? getFiscalAddress() : buildAddress('site');
+    }
+
     function goToStep(step) {
         if (step === 1 || validateStep(currentStep)) {
             document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
@@ -825,8 +1134,11 @@
                 whatsapp: document.getElementById('clientWhatsApp').value,
                 email: document.getElementById('clientEmail').value,
                 business: document.getElementById('clientBusiness').value,
-                fiscal_address: document.getElementById('clientFiscalAddress').value,
-                site_address: document.getElementById('clientSiteAddress').value
+                fiscal_address: formatAddress(getFiscalAddress()),
+                site_address: formatAddress(getSiteAddress()),
+                fiscal_address_structured: getFiscalAddress(),
+                site_address_structured: getSiteAddress(),
+                site_same_as_fiscal: document.getElementById('siteSameAsFiscal').checked
             },
             services: services
         };
@@ -898,8 +1210,8 @@
         const whatsapp = document.getElementById('clientWhatsApp').value;
         const email = document.getElementById('clientEmail').value;
         const business = document.getElementById('clientBusiness').value;
-        const fiscalAddress = document.getElementById('clientFiscalAddress').value;
-        const siteAddress = document.getElementById('clientSiteAddress').value;
+        const fiscalAddress = formatAddress(getFiscalAddress());
+        const siteAddress = formatAddress(getSiteAddress());
 
         const fields = [
             ['Ejecutivo', `${executive.name || ''} (${executive.title || ''})`],
