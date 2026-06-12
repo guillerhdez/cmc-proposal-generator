@@ -11,9 +11,10 @@ from cmc_pdf_generator_visual_v3 import CMCProposalGeneratorV3
 import io
 import os
 import re
+import json
+import gzip
 from datetime import datetime
 import logging
-import requests
 
 
 # Configurar logging
@@ -25,6 +26,19 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 CORS(app)
+
+# Catálogo de códigos postales (SEPOMEX), cargado en memoria una sola vez.
+# Fuente: https://github.com/IcaliaLabs/sepomex (datos oficiales).
+# Se usa un dataset local en lugar de un API externo porque
+# sepomex.icalialabs.com resultó no ser confiable en producción.
+POSTAL_CODES = {}
+_postal_codes_path = os.path.join(os.path.dirname(__file__), 'data', 'postal_codes.json.gz')
+try:
+    with gzip.open(_postal_codes_path, 'rt', encoding='utf-8') as f:
+        POSTAL_CODES = json.load(f)
+    logger.info(f"Catálogo de códigos postales cargado: {len(POSTAL_CODES)} CPs")
+except Exception as e:
+    logger.error(f"No se pudo cargar el catálogo de códigos postales: {e}")
 
 # Ejecutivos disponibles
 EXECUTIVES = {
@@ -131,8 +145,8 @@ def get_services():
 @app.route('/api/postal-code/<cp>', methods=['GET'])
 def get_postal_code_info(cp):
     """
-    Proxy a la API de SEPOMEX para obtener Colonia(s)/Municipio/Estado
-    a partir de un código postal mexicano. Evita CORS desde el navegador.
+    Devuelve Colonia(s)/Municipio/Estado a partir de un código postal
+    mexicano, usando el catálogo local (SEPOMEX) cargado en memoria.
 
     Respuesta:
     {
@@ -148,34 +162,18 @@ def get_postal_code_info(cp):
     if not re.fullmatch(r'\d{5}', cp):
         return jsonify({'found': False, 'error': 'invalid_format', 'message': 'El código postal debe tener 5 dígitos'}), 400
 
-    try:
-        response = requests.get(
-            'https://sepomex.icalialabs.com/api/v1/zip_codes',
-            params={'zip_code': cp},
-            timeout=5
-        )
-        response.raise_for_status()
-        data = response.json()
-        zip_codes = data.get('zip_codes', [])
+    info = POSTAL_CODES.get(cp)
 
-        if not zip_codes:
-            return jsonify({'found': False, 'zip_code': cp, 'message': 'Código postal no encontrado'}), 200
+    if not info:
+        return jsonify({'found': False, 'zip_code': cp, 'message': 'Código postal no encontrado'}), 200
 
-        state = zip_codes[0].get('d_estado', '')
-        municipality = zip_codes[0].get('d_mnpio', '')
-        neighborhoods = sorted({z.get('d_asenta', '') for z in zip_codes if z.get('d_asenta')})
-
-        return jsonify({
-            'found': True,
-            'zip_code': cp,
-            'state': state,
-            'municipality': municipality,
-            'neighborhoods': neighborhoods
-        }), 200
-
-    except requests.exceptions.RequestException as e:
-        logger.warning(f"Postal code lookup failed for {cp}: {str(e)}")
-        return jsonify({'found': False, 'zip_code': cp, 'error': 'lookup_failed', 'message': 'No se pudo consultar el código postal'}), 200
+    return jsonify({
+        'found': True,
+        'zip_code': cp,
+        'state': info.get('state', ''),
+        'municipality': info.get('municipality', ''),
+        'neighborhoods': info.get('neighborhoods', [])
+    }), 200
 
 @app.route('/generate-pdf', methods=['POST'])
 def generate_pdf():
