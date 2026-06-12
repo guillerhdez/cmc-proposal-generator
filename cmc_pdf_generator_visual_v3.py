@@ -112,21 +112,38 @@ class CMCProposalGeneratorV3:
         # Descripción del servicio (con salto de línea automático)
         description = (service.get('description') or '').strip()
         if description:
-            current_y -= 0.05*inch
-            c.setFont('Helvetica-Bold', 10)
-            c.drawString(left_margin, current_y, "Descripción:")
-            current_y -= 0.18*inch
-            
-            c.setFont('Helvetica', 9)
-            max_width = 7.1 * inch  # ancho útil (8.5in - márgenes)
-            line_height = 0.16 * inch
-            min_y = 0.3 * inch  # margen inferior de la página
-            
-            for line in self._wrap_text(c, description, 'Helvetica', 9, max_width):
-                if current_y < min_y:
-                    break  # evitar dibujar fuera de la página
-                c.drawString(left_margin, current_y, line)
-                current_y -= line_height
+            current_y = self._draw_wrapped_block(c, "Descripción:", description, left_margin, current_y)
+        
+        # Condiciones especiales (con salto de línea automático)
+        special_conditions = (conditions.get('special_conditions') or '').strip()
+        if special_conditions:
+            current_y = self._draw_wrapped_block(c, "Condiciones especiales:", special_conditions, left_margin, current_y)
+    
+    def _draw_wrapped_block(self, c, label, text, left_margin, current_y):
+        """Dibuja un bloque 'Etiqueta:' seguido de texto con salto de línea automático.
+        Retorna la nueva posición Y disponible."""
+        
+        max_width = 7.1 * inch  # ancho útil (8.5in - márgenes)
+        line_height = 0.16 * inch
+        min_y = 0.3 * inch  # margen inferior de la página
+        
+        if current_y < min_y:
+            return current_y
+        
+        current_y -= 0.05*inch
+        c.setFillColor(self.dark_blue)
+        c.setFont('Helvetica-Bold', 10)
+        c.drawString(left_margin, current_y, label)
+        current_y -= 0.18*inch
+        
+        c.setFont('Helvetica', 9)
+        for line in self._wrap_text(c, text, 'Helvetica', 9, max_width):
+            if current_y < min_y:
+                break  # evitar dibujar fuera de la página
+            c.drawString(left_margin, current_y, line)
+            current_y -= line_height
+        
+        return current_y - 0.05*inch
     
     def _wrap_text(self, c, text, font_name, font_size, max_width):
         """Divide un texto en líneas que caben dentro de max_width"""
