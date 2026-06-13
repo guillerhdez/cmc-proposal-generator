@@ -35,7 +35,6 @@ class CMCProposalGeneratorV3:
         'CCTV Cableado y redes de WIFI': '07-iot-cctv.jpg',
     }
 
-    LEFT_PANEL_RATIO = 0.40  # ancho del panel de info de servicio
 
     def __init__(self, images_dir=None):
         self.images_dir = images_dir or os.path.dirname(__file__)
@@ -205,89 +204,107 @@ class CMCProposalGeneratorV3:
     # ========== PÁGINA DE SERVICIO ==========
 
     def _draw_service_page(self, c, service):
-        """Imagen del servicio (derecha, cover) + panel de datos (izquierda)"""
+        """Slide de características del servicio a pantalla completa (contain,
+        16:9 dentro de la página horizontal) + datos del formulario colocados
+        en las barras superior/inferior resultantes (zonas vacías del slide,
+        nunca sobre los bullets ni la foto)."""
 
         PW, PH = self.PAGE_W, self.PAGE_H
-        panel_w = PW * self.LEFT_PANEL_RATIO
 
-        # --- Imagen del servicio (columna derecha) ---
         service_name = service.get('name', '')
         img_filename = self.SERVICE_IMAGES.get(service_name, '05-telefonia-ip.jpg')
         img_path = os.path.join(self.images_dir, img_filename)
-        self._draw_contain_image(c, img_path, panel_w, 0, PW - panel_w, PH)
+        self._draw_contain_image(c, img_path, 0, 0, PW, PH)
 
-        # --- Panel izquierdo (fondo claro) ---
-        c.setFillColor(self.panel_bg)
-        c.rect(0, 0, panel_w, PH, stroke=0, fill=1)
+        # Altura de las barras resultantes del 'contain' (16:9 dentro de 11x8.5")
+        bar_h = (PH - PW * 9.0 / 16.0) / 2.0
 
-        # Acento cyan en el borde del panel
+        # Líneas de acento cyan separando las barras del slide
         c.setFillColor(self.cyan)
-        c.rect(panel_w - 4, 0, 4, PH, stroke=0, fill=1)
+        c.rect(0, bar_h - 1.5, PW, 1.5, stroke=0, fill=1)
+        c.rect(0, PH - bar_h - 1.5, PW, 1.5, stroke=0, fill=1)
 
-        margin = 18
-        content_w = panel_w - 2 * margin
-        y = PH - margin - 6  # punto de partida (de arriba hacia abajo)
+        pad = 8
 
-        # Nombre del servicio
-        p_title = Paragraph(service_name or 'Servicio', self.style_title)
-        tw, th = p_title.wrap(content_w, y)
-        p_title.drawOn(c, margin, y - th)
-        y -= th + 10
+        # ===== Barra inferior: Servicio + Plazo/Renta/Instalación/Coordenadas =====
+        c.setFillColor(self.panel_bg)
+        c.rect(0, 0, PW, bar_h, stroke=0, fill=1)
 
-        # Tabla de condiciones (Plazo / Renta / Instalación / Coordenadas)
+        name_w = PW * 0.18
+        p_name = Paragraph(service_name or 'Servicio', ParagraphStyle(
+            'svc_name', fontName='Helvetica-Bold', fontSize=11,
+            leading=13, textColor=self.dark_blue
+        ))
+        nw, nh = p_name.wrap(name_w - pad, bar_h - 2 * pad)
+        p_name.drawOn(c, pad, (bar_h - nh) / 2.0)
+
         conditions = service.get('conditions', {})
-        rows = [
-            ['Plazo', conditions.get('term', '') or '—'],
-            ['Renta mensual', conditions.get('monthly_rent', '') or '—'],
-            ['Instalación', conditions.get('installation', '') or '—'],
-        ]
         coordinates = (service.get('coordinates') or '').strip()
+
+        field_labels = ['Plazo', 'Renta mensual', 'Instalación']
+        field_values = [
+            conditions.get('term', '') or '—',
+            conditions.get('monthly_rent', '') or '—',
+            conditions.get('installation', '') or '—',
+        ]
         if coordinates:
-            rows.append(['Coordenadas', coordinates])
+            field_labels.append('Coordenadas')
+            field_values.append(coordinates)
 
-        cond_table = Table(rows, colWidths=[content_w * 0.36, content_w * 0.64])
-        cond_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 9),
-            ('TEXTCOLOR', (0, 0), (-1, -1), self.dark_blue),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('BACKGROUND', (0, 0), (-1, -1), white),
-            ('GRID', (0, 0), (-1, -1), 0.5, HexColor('#CCCCCC')),
-            ('LEFTPADDING', (0, 0), (-1, -1), 5),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
-            ('TOPPADDING', (0, 0), (-1, -1), 4),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ]))
-        tw, th = cond_table.wrapOn(c, content_w, y)
-        cond_table.drawOn(c, margin, y - th)
-        y -= th + 12
+        fields_x = name_w
+        fields_w = PW - name_w - pad
+        col_w = fields_w / len(field_labels)
 
-        # Descripción
+        for i, (label, value) in enumerate(zip(field_labels, field_values)):
+            cx = fields_x + i * col_w
+            p_field = Paragraph(
+                f'<font size="7" color="#5A6B7D"><b>{label.upper()}</b></font><br/>'
+                f'<font size="8.5">{value}</font>',
+                ParagraphStyle('field', fontName='Helvetica', leading=10, textColor=self.dark_blue)
+            )
+            fw, fh = p_field.wrap(col_w - 6, bar_h - 2 * pad)
+            p_field.drawOn(c, cx + 3, (bar_h - fh) / 2.0)
+
+        # ===== Barra superior: Descripción + Condiciones especiales =====
         description = (service.get('description') or '').strip()
-        if description and y > 40:
-            y = self._draw_label_and_paragraph(c, 'Descripción:', description, margin, content_w, y)
-
-        # Condiciones especiales
         special_conditions = (conditions.get('special_conditions') or '').strip()
-        if special_conditions and y > 30:
-            y = self._draw_label_and_paragraph(c, 'Condiciones especiales:', special_conditions, margin, content_w, y)
 
-    def _draw_label_and_paragraph(self, c, label, text, x, width, y):
-        """Dibuja una etiqueta en negritas seguida de un párrafo con salto de
-        línea automático. Retorna la nueva posición Y disponible."""
+        if description or special_conditions:
+            c.setFillColor(self.panel_bg)
+            c.rect(0, PH - bar_h, PW, bar_h, stroke=0, fill=1)
 
-        p_label = Paragraph(label, self.style_label)
-        lw, lh = p_label.wrap(width, y)
-        p_label.drawOn(c, x, y - lh)
-        y -= lh + 2
+            avail_h = bar_h - 2 * pad
+            half_w = PW / 2.0 - pad - pad / 2.0
 
-        p_body = Paragraph(text, self.style_body)
-        bw, bh = p_body.wrap(width, max(y, 1))
-        p_body.drawOn(c, x, y - bh)
-        y -= bh + 10
+            style_label_sm = ParagraphStyle('label_sm', fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=self.dark_blue)
+            style_body_sm = ParagraphStyle('body_sm', fontName='Helvetica', fontSize=8, leading=10, textColor=self.dark_blue)
 
-        return y
+            if description and special_conditions:
+                self._draw_top_bar_block(c, 'Descripción:', description, pad, PH - bar_h + pad, half_w, avail_h, style_label_sm, style_body_sm)
+                self._draw_top_bar_block(c, 'Condiciones especiales:', special_conditions, pad + half_w + pad, PH - bar_h + pad, half_w, avail_h, style_label_sm, style_body_sm)
+            elif description:
+                self._draw_top_bar_block(c, 'Descripción:', description, pad, PH - bar_h + pad, PW - 2 * pad, avail_h, style_label_sm, style_body_sm)
+            else:
+                self._draw_top_bar_block(c, 'Condiciones especiales:', special_conditions, pad, PH - bar_h + pad, PW - 2 * pad, avail_h, style_label_sm, style_body_sm)
+
+    def _draw_top_bar_block(self, c, label, text, x, y, width, height, style_label, style_body):
+        """Dibuja 'Etiqueta:' + texto envuelto dentro de un bloque de ancho/alto
+        fijos (recorta verticalmente si el texto excede el alto disponible)."""
+
+        c.saveState()
+        p = c.beginPath()
+        p.rect(x, y, width, height)
+        c.clipPath(p, stroke=0)
+
+        p_label = Paragraph(label, style_label)
+        lw, lh = p_label.wrap(width, height)
+        p_label.drawOn(c, x, y + height - lh)
+
+        p_body = Paragraph(text, style_body)
+        bw, bh = p_body.wrap(width, height - lh - 2)
+        p_body.drawOn(c, x, y + height - lh - 2 - bh)
+
+        c.restoreState()
 
     # ========== PÁGINA DE RESUMEN ==========
 
