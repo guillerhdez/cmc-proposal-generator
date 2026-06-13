@@ -130,6 +130,40 @@ class CMCProposalGeneratorV3:
 
         c.drawImage(img, ox, oy, width=draw_w, height=draw_h, mask='auto')
 
+    def _draw_contain_image(self, c, img_path, x, y, w, h):
+        """Dibuja una imagen 'contenida' dentro del rectángulo (x,y,w,h),
+        sin recortar, centrada, sobre un fondo del color de marca
+        (para que las barras resultantes se mezclen con el fondo oscuro
+        de las propias slides en lugar de verse como espacio en blanco)."""
+
+        c.setFillColor(self.dark_blue)
+        c.rect(x, y, w, h, stroke=0, fill=1)
+
+        if not os.path.exists(img_path):
+            return
+
+        try:
+            img = ImageReader(img_path)
+            iw, ih = img.getSize()
+        except Exception:
+            return
+
+        img_ratio = iw / float(ih)
+        rect_ratio = w / float(h)
+
+        if img_ratio > rect_ratio:
+            draw_w = w
+            draw_h = w / img_ratio
+            ox = x
+            oy = y + (h - draw_h) / 2.0
+        else:
+            draw_h = h
+            draw_w = h * img_ratio
+            ox = x + (w - draw_w) / 2.0
+            oy = y
+
+        c.drawImage(img, ox, oy, width=draw_w, height=draw_h, mask='auto')
+
     def _draw_cover_image(self, c, img_path, x, y, w, h):
         """Dibuja una imagen cubriendo completamente el rectángulo (x,y,w,h),
         recortando el exceso (estilo CSS 'background-size: cover')."""
@@ -180,7 +214,7 @@ class CMCProposalGeneratorV3:
         service_name = service.get('name', '')
         img_filename = self.SERVICE_IMAGES.get(service_name, '05-telefonia-ip.jpg')
         img_path = os.path.join(self.images_dir, img_filename)
-        self._draw_cover_image(c, img_path, panel_w, 0, PW - panel_w, PH)
+        self._draw_contain_image(c, img_path, panel_w, 0, PW - panel_w, PH)
 
         # --- Panel izquierdo (fondo claro) ---
         c.setFillColor(self.panel_bg)
