@@ -146,6 +146,14 @@ class CMCProposalGeneratorV3:
             oy = 0
 
         c.drawImage(img, ox, oy, width=draw_w, height=draw_h, mask='auto')
+        # Tapar filos blancos con el color de fondo
+        c.setFillColor(self.dark_blue)
+        if oy > 0:
+            c.rect(0, 0, PW, oy + 1, stroke=0, fill=1)
+            c.rect(0, PH - oy - 1, PW, oy + 1, stroke=0, fill=1)
+        if ox > 0:
+            c.rect(0, 0, ox + 1, PH, stroke=0, fill=1)
+            c.rect(PW - ox - 1, 0, ox + 1, PH, stroke=0, fill=1)
 
     def _draw_contain_image(self, c, img_path, x, y, w, h):
         """Dibuja una imagen 'contenida' dentro del rectángulo (x,y,w,h),
@@ -181,7 +189,29 @@ class CMCProposalGeneratorV3:
 
         c.drawImage(img, ox, oy, width=draw_w, height=draw_h, mask='auto')
 
-    def _draw_cover_image(self, c, img_path, x, y, w, h):
+    def _draw_stretch_image(self, c, img_path, x, y, w, h):
+        """Estira la imagen para llenar exactamente el rectángulo (x,y,w,h)
+        sin mantener el ratio — igual que hace pdftoppm al rasterizar.
+        Esto garantiza que los % de calibración visual correspondan 1:1."""
+        if not os.path.exists(img_path):
+            c.setFillColor(self.dark_blue)
+            c.rect(x, y, w, h, stroke=0, fill=1)
+            return
+        try:
+            img = ImageReader(img_path)
+        except Exception:
+            c.setFillColor(self.dark_blue)
+            c.rect(x, y, w, h, stroke=0, fill=1)
+            return
+        c.saveState()
+        # Clip al rectángulo para evitar filos blancos
+        path = c.beginPath()
+        path.rect(x, y, w, h)
+        c.clipPath(path, stroke=0)
+        c.drawImage(img, x, y, width=w, height=h, mask='auto')
+        c.restoreState()
+
+
         """Dibuja una imagen cubriendo completamente el rectángulo (x,y,w,h),
         recortando el exceso (estilo CSS 'background-size: cover')."""
 
@@ -222,12 +252,12 @@ class CMCProposalGeneratorV3:
     # ========== PÁGINA DE SERVICIO ==========
 
     def _draw_service_features_page(self, c, service):
-        """Página 1 por servicio: slide de características a pantalla completa (cover)."""
+        """Página 1 por servicio: slide de características a pantalla completa."""
         PW, PH = self.PAGE_W, self.PAGE_H
         service_name = service.get('name', '')
         img_filename = self.SERVICE_IMAGES.get(service_name, '05-telefonia-ip.jpg')
         img_path = os.path.join(self.images_dir, img_filename)
-        self._draw_cover_image(c, img_path, 0, 0, PW, PH)
+        self._draw_stretch_image(c, img_path, 0, 0, PW, PH)
 
     # Bounds de la tabla nativa en cada slide de condiciones del VIP
     # (left%, right%, top%, bottom%) — medidos y confirmados visualmente
@@ -291,14 +321,12 @@ class CMCProposalGeneratorV3:
 
         # ── 1. FONDO ───────────────────────────────────────────────────────
         if has_cond_slide:
-            # Fondo = slide de condiciones — usar contain para que la imagen
-            # se posicione igual que en los previews de calibración
+            # Fondo = slide de condiciones — estirado para que bounds % coincidan exactamente
             cond_filename = self.SERVICE_COND_IMAGES.get(service_name, '01-internet-dedicado-cond.jpg')
             cond_path = os.path.join(self.images_dir, cond_filename)
-            # Fondo oscuro primero
             c.setFillColor(self.dark_blue)
             c.rect(0, 0, PW, PH, stroke=0, fill=1)
-            self._draw_contain_image(c, cond_path, 0, 0, PW, PH)
+            self._draw_stretch_image(c, cond_path, 0, 0, PW, PH)
 
             # Tapar tabla nativa con rectángulo del color del fondo oscuro
             bounds = self.SERVICE_COND_TABLE_BOUNDS.get(service_name, (0, 0.53, 0.21, 0.88))
@@ -407,7 +435,7 @@ class CMCProposalGeneratorV3:
 
         # Fondo
         bg_path = os.path.join(self.images_dir, 'portada.jpg')
-        self._draw_cover_image(c, bg_path, 0, 0, PW, PH)
+        self._draw_stretch_image(c, bg_path, 0, 0, PW, PH)
 
         # Overlay oscuro detrás del título para legibilidad
         c.saveState()
