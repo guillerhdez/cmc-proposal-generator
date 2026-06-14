@@ -22,7 +22,7 @@ import os
 class CMCProposalGeneratorV3:
     """Generador de propuestas en formato horizontal (landscape)"""
 
-    # Mapeo de servicios a imágenes extraídas de Canva
+    # Mapeo de servicios a imágenes de características (página 1 por servicio)
     SERVICE_IMAGES = {
         'Internet Dedicado': '01-internet-dedicado.jpg',
         'Internet para Eventos': '02-internet-eventos.jpg',
@@ -31,6 +31,20 @@ class CMCProposalGeneratorV3:
         'Telefonía IP': '05-telefonia-ip.jpg',
         'Telefonía IP / Cloud PBX': '05-telefonia-ip.jpg',
         'Ciberseguridad Integral': '06-ciberseguridad.jpg',
+        'Soluciones IoT': '07-iot-cctv.jpg',
+        'CCTV Cableado y redes de WIFI': '07-iot-cctv.jpg',
+    }
+
+    # Mapeo de servicios a imágenes de condiciones (página 2 por servicio)
+    SERVICE_COND_IMAGES = {
+        'Internet Dedicado': '01-internet-dedicado-cond.jpg',
+        'Internet para Eventos': '02-internet-eventos-cond.jpg',
+        'Internet Satelital': '03-internet-satelital-cond.jpg',
+        'Conectividad LTE': '04-conectividad-lte-cond.jpg',
+        'Telefonía IP': '05-telefonia-ip-cond.jpg',
+        'Telefonía IP / Cloud PBX': '05-telefonia-ip-cond.jpg',
+        'Ciberseguridad Integral': '06-ciberseguridad-cond.jpg',
+        # IoT/CCTV no tiene slide de condiciones en el VIP, usar características
         'Soluciones IoT': '07-iot-cctv.jpg',
         'CCTV Cableado y redes de WIFI': '07-iot-cctv.jpg',
     }
@@ -78,10 +92,14 @@ class CMCProposalGeneratorV3:
             img_path = os.path.join(self.images_dir, img_file)
             self._draw_institutional_page(c, img_path)
 
-        # Páginas de servicios
+        # Páginas de servicios: 2 páginas por servicio
         for service in proposal_data.get('services', []):
+            # Página 1: slide de características a pantalla completa
             new_page()
-            self._draw_service_page(c, service)
+            self._draw_service_features_page(c, service)
+            # Página 2: slide de condiciones como fondo + tabla encima
+            new_page()
+            self._draw_service_conditions_page(c, service)
 
         # Página final: resumen
         new_page()
@@ -203,108 +221,148 @@ class CMCProposalGeneratorV3:
 
     # ========== PÁGINA DE SERVICIO ==========
 
-    def _draw_service_page(self, c, service):
-        """Slide de características del servicio a pantalla completa (contain,
-        16:9 dentro de la página horizontal) + datos del formulario colocados
-        en las barras superior/inferior resultantes (zonas vacías del slide,
-        nunca sobre los bullets ni la foto)."""
-
+    def _draw_service_features_page(self, c, service):
+        """Página 1 por servicio: slide de características a pantalla completa (cover)."""
         PW, PH = self.PAGE_W, self.PAGE_H
-
         service_name = service.get('name', '')
         img_filename = self.SERVICE_IMAGES.get(service_name, '05-telefonia-ip.jpg')
         img_path = os.path.join(self.images_dir, img_filename)
-        self._draw_contain_image(c, img_path, 0, 0, PW, PH)
+        self._draw_cover_image(c, img_path, 0, 0, PW, PH)
 
-        # Altura de las barras resultantes del 'contain' (16:9 dentro de 11x8.5")
-        bar_h = (PH - PW * 9.0 / 16.0) / 2.0
+    def _draw_service_conditions_page(self, c, service):
+        """Página 2 por servicio: slide de condiciones del VIP como fondo (cover)
+        + panel izquierdo oscuro con tabla de condiciones del formulario encima."""
+        PW, PH = self.PAGE_W, self.PAGE_H
 
-        # Líneas de acento cyan separando las barras del slide
-        c.setFillColor(self.cyan)
-        c.rect(0, bar_h - 1.5, PW, 1.5, stroke=0, fill=1)
-        c.rect(0, PH - bar_h - 1.5, PW, 1.5, stroke=0, fill=1)
-
-        pad = 8
-
-        # ===== Barra inferior: Servicio + Plazo/Renta/Instalación/Coordenadas =====
-        c.setFillColor(self.panel_bg)
-        c.rect(0, 0, PW, bar_h, stroke=0, fill=1)
-
-        name_w = PW * 0.18
-        p_name = Paragraph(service_name or 'Servicio', ParagraphStyle(
-            'svc_name', fontName='Helvetica-Bold', fontSize=11,
-            leading=13, textColor=self.dark_blue
-        ))
-        nw, nh = p_name.wrap(name_w - pad, bar_h - 2 * pad)
-        p_name.drawOn(c, pad, (bar_h - nh) / 2.0)
-
+        service_name = service.get('name', '')
         conditions = service.get('conditions', {})
         coordinates = (service.get('coordinates') or '').strip()
-
-        field_labels = ['Plazo', 'Renta mensual', 'Instalación']
-        field_values = [
-            conditions.get('term', '') or '—',
-            conditions.get('monthly_rent', '') or '—',
-            conditions.get('installation', '') or '—',
-        ]
-        if coordinates:
-            field_labels.append('Coordenadas')
-            field_values.append(coordinates)
-
-        fields_x = name_w
-        fields_w = PW - name_w - pad
-        col_w = fields_w / len(field_labels)
-
-        for i, (label, value) in enumerate(zip(field_labels, field_values)):
-            cx = fields_x + i * col_w
-            p_field = Paragraph(
-                f'<font size="7" color="#5A6B7D"><b>{label.upper()}</b></font><br/>'
-                f'<font size="8.5">{value}</font>',
-                ParagraphStyle('field', fontName='Helvetica', leading=10, textColor=self.dark_blue)
-            )
-            fw, fh = p_field.wrap(col_w - 6, bar_h - 2 * pad)
-            p_field.drawOn(c, cx + 3, (bar_h - fh) / 2.0)
-
-        # ===== Barra superior: Descripción + Condiciones especiales =====
         description = (service.get('description') or '').strip()
         special_conditions = (conditions.get('special_conditions') or '').strip()
 
-        if description or special_conditions:
-            c.setFillColor(self.panel_bg)
-            c.rect(0, PH - bar_h, PW, bar_h, stroke=0, fill=1)
+        # 1. Fondo: slide de condiciones del VIP a pantalla completa
+        cond_filename = self.SERVICE_COND_IMAGES.get(service_name, '01-internet-dedicado-cond.jpg')
+        cond_path = os.path.join(self.images_dir, cond_filename)
+        self._draw_cover_image(c, cond_path, 0, 0, PW, PH)
 
-            avail_h = bar_h - 2 * pad
-            half_w = PW / 2.0 - pad - pad / 2.0
+        # 2. Panel izquierdo: fondo semitransparente oscuro (47% del ancho)
+        panel_w = PW * 0.47
+        pad = 14
 
-            style_label_sm = ParagraphStyle('label_sm', fontName='Helvetica-Bold', fontSize=8, leading=10, textColor=self.dark_blue)
-            style_body_sm = ParagraphStyle('body_sm', fontName='Helvetica', fontSize=8, leading=10, textColor=self.dark_blue)
-
-            if description and special_conditions:
-                self._draw_top_bar_block(c, 'Descripción:', description, pad, PH - bar_h + pad, half_w, avail_h, style_label_sm, style_body_sm)
-                self._draw_top_bar_block(c, 'Condiciones especiales:', special_conditions, pad + half_w + pad, PH - bar_h + pad, half_w, avail_h, style_label_sm, style_body_sm)
-            elif description:
-                self._draw_top_bar_block(c, 'Descripción:', description, pad, PH - bar_h + pad, PW - 2 * pad, avail_h, style_label_sm, style_body_sm)
-            else:
-                self._draw_top_bar_block(c, 'Condiciones especiales:', special_conditions, pad, PH - bar_h + pad, PW - 2 * pad, avail_h, style_label_sm, style_body_sm)
-
-    def _draw_top_bar_block(self, c, label, text, x, y, width, height, style_label, style_body):
-        """Dibuja 'Etiqueta:' + texto envuelto dentro de un bloque de ancho/alto
-        fijos (recorta verticalmente si el texto excede el alto disponible)."""
-
+        # Fondo oscuro semitransparente sobre el panel
         c.saveState()
-        p = c.beginPath()
-        p.rect(x, y, width, height)
-        c.clipPath(p, stroke=0)
-
-        p_label = Paragraph(label, style_label)
-        lw, lh = p_label.wrap(width, height)
-        p_label.drawOn(c, x, y + height - lh)
-
-        p_body = Paragraph(text, style_body)
-        bw, bh = p_body.wrap(width, height - lh - 2)
-        p_body.drawOn(c, x, y + height - lh - 2 - bh)
-
+        c.setFillColor(HexColor('#001528'))
+        c.setFillAlpha(0.88)
+        c.rect(0, 0, panel_w, PH, stroke=0, fill=1)
         c.restoreState()
+
+        # Línea de acento cyan en el borde derecho del panel
+        c.setFillColor(self.cyan)
+        c.rect(panel_w - 2, 0, 2, PH, stroke=0, fill=1)
+
+        # 3. Contenido del panel: título del servicio
+        y_cursor = PH - pad - 6
+
+        p_title = Paragraph(service_name, ParagraphStyle(
+            'cond_title', fontName='Helvetica-Bold', fontSize=13,
+            leading=16, textColor=white
+        ))
+        tw, th = p_title.wrap(panel_w - 2 * pad, 40)
+        p_title.drawOn(c, pad, y_cursor - th)
+        y_cursor -= th + 6
+
+        # Línea separadora cyan
+        c.setFillColor(self.cyan)
+        c.rect(pad, y_cursor, panel_w - 2 * pad, 1.5, stroke=0, fill=1)
+        y_cursor -= 10
+
+        # 4. Tabla de condiciones estilo PROPUESTA_FORMAL_CMC_3 pág 6
+        # Encabezado cyan, filas dark_blue alterno, texto blanco
+        col_w_label = (panel_w - 2 * pad) * 0.42
+        col_w_value = (panel_w - 2 * pad) * 0.58
+
+        style_header = ParagraphStyle('th', fontName='Helvetica-Bold', fontSize=8,
+                                      leading=10, textColor=white)
+        style_cell_label = ParagraphStyle('td_label', fontName='Helvetica-Bold', fontSize=8,
+                                          leading=10, textColor=self.cyan)
+        style_cell_value = ParagraphStyle('td_val', fontName='Helvetica', fontSize=8,
+                                          leading=10, textColor=white)
+
+        rows = [
+            ('CONDICIÓN', 'DETALLE'),
+            ('PLAZO', conditions.get('term', '') or '—'),
+            ('RENTA MENSUAL', conditions.get('monthly_rent', '') or '—'),
+            ('INSTALACIÓN', conditions.get('installation', '') or '—'),
+        ]
+        if coordinates:
+            rows.append(('COORDENADAS', coordinates))
+
+        row_h = 22
+        table_h = row_h * len(rows)
+
+        for i, (label, value) in enumerate(rows):
+            row_y = y_cursor - (i + 1) * row_h
+            # Fondo de fila
+            if i == 0:
+                c.setFillColor(self.cyan)
+            elif i % 2 == 1:
+                c.setFillColor(HexColor('#002244'))
+            else:
+                c.setFillColor(HexColor('#001A33'))
+            c.rect(pad, row_y, panel_w - 2 * pad, row_h, stroke=0, fill=1)
+
+            # Texto
+            if i == 0:
+                st_l = style_header
+                st_v = style_header
+            else:
+                st_l = style_cell_label
+                st_v = style_cell_value
+
+            p_l = Paragraph(label, st_l)
+            p_l.wrap(col_w_label - 4, row_h - 4)
+            p_l.drawOn(c, pad + 4, row_y + 4)
+
+            p_v = Paragraph(value, st_v)
+            p_v.wrap(col_w_value - 4, row_h - 4)
+            p_v.drawOn(c, pad + col_w_label + 4, row_y + 4)
+
+        y_cursor -= table_h + 12
+
+        # 5. Descripción
+        if description:
+            p_dl = Paragraph('DESCRIPCIÓN', ParagraphStyle(
+                'dl', fontName='Helvetica-Bold', fontSize=7,
+                leading=9, textColor=self.cyan
+            ))
+            p_dl.wrap(panel_w - 2 * pad, 20)
+            p_dl.drawOn(c, pad, y_cursor - 10)
+            y_cursor -= 12
+
+            p_db = Paragraph(description, ParagraphStyle(
+                'db', fontName='Helvetica', fontSize=8,
+                leading=10, textColor=white
+            ))
+            dw, dh = p_db.wrap(panel_w - 2 * pad, y_cursor - pad - 30)
+            p_db.drawOn(c, pad, y_cursor - dh)
+            y_cursor -= dh + 10
+
+        # 6. Condiciones especiales
+        if special_conditions:
+            p_sl = Paragraph('CONDICIONES ESPECIALES', ParagraphStyle(
+                'sl', fontName='Helvetica-Bold', fontSize=7,
+                leading=9, textColor=self.cyan
+            ))
+            p_sl.wrap(panel_w - 2 * pad, 20)
+            p_sl.drawOn(c, pad, y_cursor - 10)
+            y_cursor -= 12
+
+            p_sb = Paragraph(special_conditions, ParagraphStyle(
+                'sb', fontName='Helvetica', fontSize=8,
+                leading=10, textColor=white
+            ))
+            sw, sh = p_sb.wrap(panel_w - 2 * pad, max(y_cursor - pad, 20))
+            p_sb.drawOn(c, pad, y_cursor - sh)
 
     # ========== PÁGINA DE RESUMEN ==========
 
