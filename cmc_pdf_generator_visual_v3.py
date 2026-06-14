@@ -234,8 +234,6 @@ class CMCProposalGeneratorV3:
     SERVICE_COND_TABLE_BOUNDS = {
         'Internet Dedicado':        (0.01,  0.526, 0.21,  0.88),
         'Internet Satelital':       (0.027, 0.53,  0.20,  0.888),
-        'Telefonía IP':             (0.04,  0.535, 0.20,  0.878),
-        'Telefonía IP / Cloud PBX': (0.04,  0.535, 0.20,  0.878),
         'Ciberseguridad Integral':  (0.04,  0.53,  0.20,  0.88),
     }
 
@@ -243,8 +241,6 @@ class CMCProposalGeneratorV3:
     SERVICES_WITH_COND_SLIDE = {
         'Internet Dedicado',
         'Internet Satelital',
-        'Telefonía IP',
-        'Telefonía IP / Cloud PBX',
         'Ciberseguridad Integral',
     }
 
