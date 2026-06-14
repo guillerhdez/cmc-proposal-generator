@@ -232,14 +232,16 @@ class CMCProposalGeneratorV3:
     # Bounds de la tabla nativa en cada slide de condiciones del VIP
     # (left%, right%, top%, bottom%) — medidos y confirmados visualmente
     SERVICE_COND_TABLE_BOUNDS = {
-        'Internet Dedicado':        (0.01, 0.526, 0.21, 0.88),
-        'Telefonía IP':             (0.04, 0.535, 0.20, 0.878),
-        'Telefonía IP / Cloud PBX': (0.04, 0.535, 0.20, 0.878),
+        'Internet Dedicado':        (0.01,  0.526, 0.21,  0.88),
+        'Internet Satelital':       (0.027, 0.53,  0.20,  0.888),
+        'Telefonía IP':             (0.04,  0.535, 0.20,  0.878),
+        'Telefonía IP / Cloud PBX': (0.04,  0.535, 0.20,  0.878),
     }
 
     # Servicios que usan slide de condiciones del VIP como fondo
     SERVICES_WITH_COND_SLIDE = {
         'Internet Dedicado',
+        'Internet Satelital',
         'Telefonía IP',
         'Telefonía IP / Cloud PBX',
     }
