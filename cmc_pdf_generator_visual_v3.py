@@ -315,24 +315,32 @@ class CMCProposalGeneratorV3:
                 c.line(x, 0, x + PH, PH)
             c.restoreState()
 
-        # ── 2. PANEL con tabla — tamaño ajustado al contenido ──────────────
-        # Posición: centrado verticalmente, alineado a la izquierda
-        panel_w = PW * 0.42
-        panel_x = 0
-        panel_y = (PH - panel_h) / 2.0  # centrado vertical
+        # ── 2. PANEL con tabla — posicionado según bounds calibrados ───────
+        if has_cond_slide:
+            bounds = self.SERVICE_COND_TABLE_BOUNDS.get(service_name, (0, 0.53, 0.21, 0.88))
+            bl, br, bt, bb = bounds
+            panel_x = PW * bl
+            panel_w = PW * br - panel_x
+            panel_y = PH * (1.0 - bb)
+            panel_h_actual = PH * (bb - bt)
+        else:
+            panel_x = 0
+            panel_w = PW * 0.42
+            panel_h_actual = panel_h
+            panel_y = (PH - panel_h) / 2.0
 
         # Fondo del panel
         c.setFillColor(self.dark_blue)
-        c.rect(panel_x, panel_y, panel_w, panel_h, stroke=0, fill=1)
+        c.rect(panel_x, panel_y, panel_w, panel_h_actual, stroke=0, fill=1)
 
         # Borde cyan derecho e inferior
         c.setFillColor(self.cyan)
-        c.rect(panel_x + panel_w - 2, panel_y, 2, panel_h, stroke=0, fill=1)
+        c.rect(panel_x + panel_w - 2, panel_y, 2, panel_h_actual, stroke=0, fill=1)
         c.rect(panel_x, panel_y, panel_w, 2, stroke=0, fill=1)
-        c.rect(panel_x, panel_y + panel_h - 2, panel_w, 2, stroke=0, fill=1)
+        c.rect(panel_x, panel_y + panel_h_actual - 2, panel_w, 2, stroke=0, fill=1)
 
         # ── 3. TÍTULO ──────────────────────────────────────────────────────
-        y_cursor = panel_y + panel_h - pad
+        y_cursor = panel_y + panel_h_actual - pad
 
         p_title = Paragraph(service_name, ParagraphStyle(
             'cond_title', fontName='Helvetica-Bold', fontSize=12,
