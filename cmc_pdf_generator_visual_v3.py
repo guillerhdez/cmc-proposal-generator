@@ -233,16 +233,20 @@ class CMCProposalGeneratorV3:
     # (left%, right%, top%, bottom%) — medidos y confirmados visualmente
     SERVICE_COND_TABLE_BOUNDS = {
         'Internet Dedicado':        (0.01,  0.526, 0.21,  0.88),
+        'Internet para Eventos':    (0.07,  0.55,  0.245, 0.55),
         'Internet Satelital':       (0.027, 0.53,  0.20,  0.888),
+        'Conectividad LTE':         (0.027, 0.527, 0.21,  0.88),
         'Telefonía IP':             (0.02,  0.52,  0.213, 0.58),
         'Telefonía IP / Cloud PBX': (0.02,  0.52,  0.213, 0.58),
         'Ciberseguridad Integral':  (0.04,  0.53,  0.20,  0.88),
     }
 
-    # Servicios que usan slide de condiciones del VIP como fondo
+    # Servicios que usan slide como fondo para página de condiciones
     SERVICES_WITH_COND_SLIDE = {
         'Internet Dedicado',
+        'Internet para Eventos',
         'Internet Satelital',
+        'Conectividad LTE',
         'Telefonía IP',
         'Telefonía IP / Cloud PBX',
         'Ciberseguridad Integral',
