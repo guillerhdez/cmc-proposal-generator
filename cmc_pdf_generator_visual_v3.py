@@ -263,9 +263,9 @@ class CMCProposalGeneratorV3:
     # (left%, right%, top%, bottom%) — medidos y confirmados visualmente
     SERVICE_COND_TABLE_BOUNDS = {
         'Internet Dedicado':        (0.00,  0.516, 0.21,  0.88),
-        'Internet para Eventos':    (0.07,  0.55,  0.245, 0.55),
+        'Internet para Eventos':    (0.00,  0.57,  0.245, 0.70),
         'Internet Satelital':       (0.00,  0.53,  0.20,  0.888),
-        'Conectividad LTE':         (0.027, 0.527, 0.21,  0.88),
+        'Conectividad LTE':         (0.00,  0.527, 0.21,  0.885),
         'Telefonía IP':             (0.00,  0.54,  0.213, 0.58),
         'Telefonía IP / Cloud PBX': (0.00,  0.54,  0.213, 0.58),
         'Ciberseguridad Integral':  (0.00,  0.54,  0.20,  0.88),
