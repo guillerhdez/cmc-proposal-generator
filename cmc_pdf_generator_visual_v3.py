@@ -291,18 +291,22 @@ class CMCProposalGeneratorV3:
 
         # ── 1. FONDO ───────────────────────────────────────────────────────
         if has_cond_slide:
-            # Fondo = slide de condiciones del VIP
+            # Fondo = slide de condiciones — usar contain para que la imagen
+            # se posicione igual que en los previews de calibración
             cond_filename = self.SERVICE_COND_IMAGES.get(service_name, '01-internet-dedicado-cond.jpg')
             cond_path = os.path.join(self.images_dir, cond_filename)
-            self._draw_cover_image(c, cond_path, 0, 0, PW, PH)
+            # Fondo oscuro primero
+            c.setFillColor(self.dark_blue)
+            c.rect(0, 0, PW, PH, stroke=0, fill=1)
+            self._draw_contain_image(c, cond_path, 0, 0, PW, PH)
 
-            # Tapar tabla nativa con rectángulo del color del fondo oscuro del slide
+            # Tapar tabla nativa con rectángulo del color del fondo oscuro
             bounds = self.SERVICE_COND_TABLE_BOUNDS.get(service_name, (0, 0.53, 0.21, 0.88))
             bl, br, bt, bb = bounds
-            # En ReportLab y=0 es abajo; convertir %: top del PDF = PH*(1-bt), bottom = PH*(1-bb)
             cover_x = PW * bl
-            cover_w = PW * br - cover_x
+            cover_w = PW * (br - bl)
             cover_y = PH * (1.0 - bb)
+            cover_h = PH * (bb - bt)
             cover_h = PH * (bb - bt)
             c.setFillColor(self.dark_blue)
             c.rect(cover_x, cover_y, cover_w, cover_h, stroke=0, fill=1)
