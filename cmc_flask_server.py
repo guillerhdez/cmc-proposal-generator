@@ -355,7 +355,7 @@ def odoo_sync():
             [[['name', '=', company_name]]])
         partner_vals = {
             'name': company_name, 'is_company': True,
-            'phone': phone, 'mobile': phone,
+            'phone': phone,
             'comment': f'Giro: {client.get("sector", "")}',
         }
         if existing:
@@ -372,7 +372,7 @@ def odoo_sync():
         if not contact_ex:
             models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'create', [{
                 'name': contact_name, 'parent_id': partner_id,
-                'type': 'contact', 'mobile': phone, 'email': email_client,
+                'type': 'contact', 'email': email_client,
             }])
 
         # 3. Oportunidad CRM
@@ -448,7 +448,7 @@ def odoo_sync():
         existing = odoo_call('res.partner', 'search', [[['name', '=', company_name]]], {'limit': 1})
         partner_vals = {
             'name': company_name, 'is_company': True,
-            'phone': phone, 'mobile': phone,
+            'phone': phone,
             'comment': f'Giro: {client.get("sector", "")}',
         }
         if existing:
@@ -465,7 +465,7 @@ def odoo_sync():
         if not contact_existing:
             odoo_call('res.partner', 'create', [{
                 'name': contact_name, 'parent_id': partner_id,
-                'type': 'contact', 'mobile': phone, 'email': email,
+                'type': 'contact', 'email': email,
             }])
 
         # 3. Crear oportunidad
