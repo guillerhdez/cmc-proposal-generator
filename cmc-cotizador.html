@@ -1359,6 +1359,10 @@
         status.textContent = 'Conectando con Odoo...';
 
         try {
+            // Verificar que proposalData tiene datos válidos
+            if (!proposalData?.client?.company) {
+                throw new Error('No hay datos de propuesta. Por favor regresa al paso 1 y avanza al paso 3 nuevamente.');
+            }
             console.log('proposalData en sync:', JSON.stringify(proposalData));
             const response = await fetch('/api/odoo/sync', {
                 method: 'POST',
