@@ -267,7 +267,7 @@ def odoo_login():
         password = data.get('password', '').strip()
 
         odoo_url = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
-        odoo_db  = os.environ.get('ODOO_DB',  'cmc-network')
+        odoo_db  = os.environ.get('ODOO_DB',  'cmc-network.odoo.com')
 
         common = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/common')
         uid = common.authenticate(odoo_db, email, password, {})
@@ -303,7 +303,7 @@ def odoo_sync():
         data = request.get_json()
 
         odoo_url  = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
-        odoo_db   = os.environ.get('ODOO_DB',  'cmc-network')
+        odoo_db   = os.environ.get('ODOO_DB',  'cmc-network.odoo.com')
         # Usar credenciales del ejecutivo logueado, con fallback al admin
         odoo_user = data.get('odoo_user') or os.environ.get('ODOO_USER', 'ghernandez@cmcnetwork.mx')
         odoo_key  = data.get('odoo_password') or os.environ.get('ODOO_API_KEY', '')
