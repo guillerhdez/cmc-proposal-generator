@@ -345,6 +345,8 @@ def odoo_sync():
         client   = data.get('client', {})
         services = data.get('services', [])
 
+        logger.info(f"Sync data - client: {client}, services count: {len(services)}")
+
         company_name = client.get('company', '')
         contact_name = client.get('contact', '')
         phone        = client.get('whatsapp', '')
@@ -413,97 +415,6 @@ def odoo_sync():
     except Exception as e:
         logger.error(f"Odoo sync error: {str(e)}", exc_info=True)
         return jsonify({'error': str(e)}), 500
-
-        odoo_url    = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
-        session_id  = data.get('odoo_session_id', '')
-        client      = data.get('client', {})
-        services    = data.get('services', [])
-
-        headers = {
-            'Content-Type': 'application/json',
-            'Cookie': f'session_id={session_id}' if session_id else '',
-        }
-
-        def odoo_call(model, method, args=None, kwargs=None):
-            r = req.post(f'{odoo_url}/web/dataset/call_kw', headers=headers, json={
-                'jsonrpc': '2.0', 'method': 'call',
-                'params': {
-                    'model': model, 'method': method,
-                    'args': args or [], 'kwargs': kwargs or {}
-                }
-            }, timeout=15)
-            result = r.json()
-            if result.get('error'):
-                raise Exception(result['error'].get('data', {}).get('message', str(result['error'])))
-            return result.get('result')
-
-        company_name = client.get('company', '')
-        contact_name = client.get('contact', '')
-        phone        = client.get('whatsapp', '')
-        email        = client.get('email', '')
-
-        logger.info(f"Odoo sync: company={company_name}, contact={contact_name}")
-
-        # 1. Buscar o crear empresa
-        existing = odoo_call('res.partner', 'search', [[['name', '=', company_name]]], {'limit': 1})
-        partner_vals = {
-            'name': company_name, 'is_company': True,
-            'phone': phone,
-            'comment': f'Giro: {client.get("sector", "")}',
-        }
-        if existing:
-            odoo_call('res.partner', 'write', [[existing[0]], partner_vals])
-            partner_id = existing[0]
-            partner_action = 'actualizado'
-        else:
-            partner_id = odoo_call('res.partner', 'create', [partner_vals])
-            partner_action = 'creado'
-
-        # 2. Crear contacto persona
-        contact_existing = odoo_call('res.partner', 'search',
-            [[['name', '=', contact_name], ['parent_id', '=', partner_id]]], {'limit': 1})
-        if not contact_existing:
-            odoo_call('res.partner', 'create', [{
-                'name': contact_name, 'parent_id': partner_id,
-                'type': 'contact', 'email': email,
-            }])
-
-        # 3. Crear oportunidad
-        desc = '\n'.join([
-            f"• {s.get('name','')}: {s.get('conditions',{}).get('monthly_rent','—')}/mes ({s.get('conditions',{}).get('term','—')})"
-            for s in services
-        ])
-        total = sum(
-            float(''.join(c for c in str(s.get('conditions',{}).get('monthly_rent','0')) if c.isdigit() or c == '.') or '0')
-            for s in services
-        )
-
-        stages = odoo_call('crm.stage', 'search_read', [[]], {'fields': ['id'], 'limit': 1, 'order': 'sequence asc'})
-        stage_id = stages[0]['id'] if stages else False
-
-        lead_vals = {
-            'name': f"Propuesta {company_name} — {', '.join(s.get('name','') for s in services)}",
-            'partner_id': partner_id, 'contact_name': contact_name,
-            'phone': phone, 'email_from': email,
-            'description': desc, 'expected_revenue': total,
-        }
-        if stage_id:
-            lead_vals['stage_id'] = stage_id
-
-        lead_id = odoo_call('crm.lead', 'create', [lead_vals])
-        logger.info(f"Odoo sync OK: partner_id={partner_id}, lead_id={lead_id}")
-
-        return jsonify({
-            'success': True,
-            'partner_id': partner_id,
-            'partner_action': partner_action,
-            'lead_id': lead_id,
-            'message': f'Contacto {partner_action} y oportunidad #{lead_id} creada en Odoo'
-        })
-
-    except Exception as e:
-        logger.error(f"Odoo sync error: {str(e)}", exc_info=True)
-        return jsonify({'error': str(e), 'detail': repr(e)}), 500
 
 
 @app.route('/cmc-cotizador.html', methods=['GET'])
