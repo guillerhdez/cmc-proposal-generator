@@ -405,14 +405,17 @@ def odoo_sync():
             partner_action = 'creado'
 
         # 2. Contacto persona
+        contact_vals = {
+            'name': contact_name, 'parent_id': partner_id,
+            'type': 'contact', 'email': email_client,
+            'phone': phone,
+        }
         contact_ex = models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'search',
             [[['name', '=', contact_name], ['parent_id', '=', partner_id]]])
-        if not contact_ex:
-            models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'create', [{
-                'name': contact_name, 'parent_id': partner_id,
-                'type': 'contact', 'email': email_client,
-                'phone': phone,
-            }])
+        if contact_ex:
+            models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'write', [contact_ex, contact_vals])
+        else:
+            models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'create', [contact_vals])
 
         # 3. Dirección del sitio (si es diferente a la fiscal)
         if not site_same:
@@ -441,11 +444,20 @@ def odoo_sync():
                 models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'create', [site_vals])
 
         # 3. Oportunidad CRM
-        desc = '\n'.join([
-            f"• {s.get('name','')}: {s.get('conditions',{}).get('monthly_rent','—')}/mes "
-            f"({s.get('conditions',{}).get('term','—')})"
-            for s in services
-        ])
+        desc_lines = []
+        for s in services:
+            conds = s.get('conditions', {})
+            line = f"• {s.get('name','')}: ${conds.get('monthly_rent','—')}/mes ({conds.get('term','—')})"
+            if conds.get('installation'):
+                line += f" | Instalación: ${conds.get('installation')}"
+            if s.get('coordinates'):
+                line += f"\n  📍 Coordenadas: {s.get('coordinates')}"
+            if s.get('description'):
+                line += f"\n  📋 Descripción: {s.get('description')}"
+            if conds.get('special_conditions'):
+                line += f"\n  ⚠️ Condiciones especiales: {conds.get('special_conditions')}"
+            desc_lines.append(line)
+        desc = '\n\n'.join(desc_lines)
         total = sum(
             float(''.join(c for c in str(s.get('conditions',{}).get('monthly_rent','0'))
                 if c.isdigit() or c == '.') or '0')

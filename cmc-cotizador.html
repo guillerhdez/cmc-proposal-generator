@@ -1345,6 +1345,9 @@
                 const coordsLine = service.coordinates
                     ? `<br>📍 Coordenadas: <a href="https://www.google.com/maps?q=${encodeURIComponent(service.coordinates)}" target="_blank">${escapeHtml(service.coordinates)}</a>`
                     : '';
+                const descLine = service.description
+                    ? `<br>📋 Descripción: ${escapeHtml(service.description)}`
+                    : '';
                 html += `
                     <div class="summary-item">
                         <div class="summary-label">${escapeHtml(service.name || '')}</div>
@@ -1353,6 +1356,7 @@
                             Renta: ${escapeHtml(c.monthly_rent || '—')} |
                             Instalación: ${escapeHtml(c.installation || '—')}
                             ${coordsLine}
+                            ${descLine}
                         </div>
                     </div>`;
             });
