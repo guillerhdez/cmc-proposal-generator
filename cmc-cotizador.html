@@ -489,9 +489,12 @@
         </div>
         <div style="margin-bottom:24px;">
             <label style="display:block; font-size:13px; font-weight:600; color:#333; margin-bottom:6px;">Contraseña</label>
-            <input type="password" id="loginPassword" placeholder="••••••••"
-                style="width:100%; padding:10px 14px; border:1px solid #ddd; border-radius:6px; font-size:14px; outline:none;"
-                onkeydown="if(event.key==='Enter') doLogin()">
+            <div style="position:relative;">
+                <input type="password" id="loginPassword" placeholder="••••••••"
+                    style="width:100%; padding:10px 40px 10px 14px; border:1px solid #ddd; border-radius:6px; font-size:14px; outline:none;"
+                    onkeydown="if(event.key==='Enter') doLogin()">
+                <span onclick="togglePassword()" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:16px; user-select:none;" id="eyeIcon">👁️</span>
+            </div>
         </div>
         <div id="loginRemember" style="margin-bottom:20px; display:flex; align-items:center; gap:8px;">
             <input type="checkbox" id="rememberMe" checked style="width:16px; height:16px; cursor:pointer;">
@@ -1402,6 +1405,18 @@
 
     // ========== AUTENTICACIÓN ODOO ==========
     let odooSession = null;
+
+    function togglePassword() {
+        const input = document.getElementById('loginPassword');
+        const icon  = document.getElementById('eyeIcon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.textContent = '🙈';
+        } else {
+            input.type = 'password';
+            icon.textContent = '👁️';
+        }
+    }
 
     async function doLogin() {
         const email    = document.getElementById('loginEmail').value.trim();
