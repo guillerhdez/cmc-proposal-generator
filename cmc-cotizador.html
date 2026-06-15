@@ -505,6 +505,9 @@
             Iniciar sesión
         </button>
         <div id="loginError" style="display:none; margin-top:12px; padding:10px; background:#fff0f0; border:1px solid #ffcccc; border-radius:6px; color:#c0392b; font-size:13px; text-align:center;"></div>
+        <div style="text-align:center; margin-top:16px;">
+            <a href="#" onclick="localStorage.clear(); location.reload();" style="font-size:11px; color:#aaa; text-decoration:none;">Limpiar sesión guardada</a>
+        </div>
     </div>
 </div>
 
@@ -1490,8 +1493,15 @@
         const saved = localStorage.getItem('cmc_session');
         if (saved) {
             try {
-                odooSession = JSON.parse(saved);
-                showApp();
+                const parsed = JSON.parse(saved);
+                // Si la sesión tiene DB incorrecta, limpiarla
+                if (parsed.db && parsed.db.includes('.odoo.com')) {
+                    localStorage.removeItem('cmc_session');
+                    document.getElementById('loginScreen').style.display = 'flex';
+                } else {
+                    odooSession = parsed;
+                    showApp();
+                }
             } catch(e) {
                 localStorage.removeItem('cmc_session');
                 document.getElementById('loginScreen').style.display = 'flex';
