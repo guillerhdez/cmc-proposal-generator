@@ -777,6 +777,7 @@
 
     let currentStep = 1;
     let services = [];
+    let proposalData = null;
 
     // ========== FUNCIONES DE NAVEGACIÓN ==========
     function updateExecutiveInfo() {
@@ -971,6 +972,40 @@
             
             if (step === 3) {
                 renderSummary();
+                // Construir proposalData global para Odoo y PDF
+                const executive = EXECUTIVES[document.getElementById('executive').value] || {};
+                proposalData = {
+                    executive: {
+                        name: executive.name || '',
+                        title: executive.title || '',
+                        email: executive.email || '',
+                        phone: executive.phone || '',
+                    },
+                    client: {
+                        company:  document.getElementById('clientCompany').value,
+                        contact:  document.getElementById('clientContact').value,
+                        phone:    document.getElementById('clientPhone')?.value || '',
+                        whatsapp: document.getElementById('clientWhatsApp').value,
+                        email:    document.getElementById('clientEmail').value,
+                        sector:   document.getElementById('clientSector').value,
+                    },
+                    services: services.map(s => ({
+                        name:        s.name || '',
+                        description: s.description || '',
+                        coordinates: s.coordinates || '',
+                        conditions: {
+                            term:               s.conditions?.term || '',
+                            monthly_rent:       s.conditions?.monthly_rent || '',
+                            installation:       s.conditions?.installation || '',
+                            special_conditions: s.conditions?.special_conditions || '',
+                        }
+                    }))
+                };
+                // Resetear botón Odoo
+                const odooBtn = document.getElementById('odooBtn');
+                const odooStatus = document.getElementById('odooStatus');
+                if (odooBtn) { odooBtn.disabled = false; odooBtn.textContent = '🔗 Enviar a Odoo'; }
+                if (odooStatus) odooStatus.style.display = 'none';
             }
         }
     }
@@ -1162,7 +1197,7 @@
         
         const executive = EXECUTIVES[document.getElementById('executive').value];
         
-        const proposalData = {
+        proposalData = {
             executive: {
                 name: executive.name,
                 title: executive.title,
