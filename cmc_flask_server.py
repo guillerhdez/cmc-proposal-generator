@@ -352,6 +352,9 @@ def odoo_sync():
         contact_name = client.get('contact', '')
         phone        = client.get('whatsapp', '')
         email_client = client.get('email', '')
+        fiscal       = client.get('fiscal', {})
+        site         = client.get('site', {})
+        site_same    = client.get('site_same_as_fiscal', True)
 
         # Buscar ID de México en Odoo
         mx = models.execute_kw(odoo_db, uid, api_key, 'res.country', 'search',
