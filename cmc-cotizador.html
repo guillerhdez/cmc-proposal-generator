@@ -742,7 +742,8 @@
             <div class="navigation">
                 <button class="btn-secondary" onclick="goToStep(2)">← Atrás</button>
                 <button class="btn-success" id="downloadBtn" onclick="generateAndDownloadPDF()">📥 Descargar PDF</button>
-                <button class="btn-whatsapp" id="shareBtn" onclick="shareViaWhatsApp()" style="background: #25D366; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-left: 10px;">📱 Compartir por WhatsApp</button>
+                <button class="btn-whatsapp" id="shareBtn" onclick="shareViaWhatsApp('app')" style="background: #25D366; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-left: 10px;">📱 WhatsApp App</button>
+                <button class="btn-whatsapp" id="shareBtnWeb" onclick="shareViaWhatsApp('web')" style="background: #128C7E; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-left: 10px;">💻 WhatsApp Web</button>
                 <button id="odooBtn" onclick="syncToOdoo()" style="background: #714B67; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-left: 10px;">🔗 Enviar a Odoo</button>
                 <div id="odooStatus" style="margin-top: 10px; font-size: 14px; display: none;"></div>
             </div>
@@ -1418,19 +1419,20 @@
         }
     }
 
-    function shareViaWhatsApp() {
+    function shareViaWhatsApp(mode) {
         const whatsapp = document.getElementById('clientWhatsApp').value;
         const company = document.getElementById('clientCompany').value;
-        
+
         if (!whatsapp) {
             showAlert('Ingresa el número de WhatsApp del cliente', 'error');
             return;
         }
-        
-        // Formatear número (remover espacios, guiones)
+
         const cleanWhatsApp = whatsapp.replace(/[^0-9]/g, '');
         const message = `Hola, te envío la propuesta de servicios para ${company} de CMC Network 🚀`;
-        const url = `https://wa.me/${cleanWhatsApp}?text=${encodeURIComponent(message)}`;
+        const url = mode === 'web'
+            ? `https://web.whatsapp.com/send?phone=${cleanWhatsApp}&text=${encodeURIComponent(message)}`
+            : `https://wa.me/${cleanWhatsApp}?text=${encodeURIComponent(message)}`;
         window.open(url, '_blank');
     }
 
