@@ -467,6 +467,13 @@ def odoo_sync():
             [[]], {'fields': ['id'], 'limit': 1, 'order': 'sequence asc'})
         stage_id = stages[0]['id'] if stages else False
 
+        # Mapeo de plazo a recurring_plan de Odoo
+        PLAN_MAP = {'12': 2, '24': 5, '36': 3}  # meses -> id plan
+        # Usar el plazo del primer servicio
+        first_term = (services[0].get('conditions', {}).get('term', '') if services else '')
+        term_months = ''.join(filter(str.isdigit, first_term.split()[0])) if first_term else ''
+        recurring_plan_id = PLAN_MAP.get(term_months, 1)  # default: Mes
+
         lead_vals = {
             'name': f"Propuesta {company_name} — {', '.join(s.get('name','') for s in services)}",
             'partner_id': partner_id, 'contact_name': contact_name,
@@ -478,6 +485,7 @@ def odoo_sync():
                     if c.isdigit() or c == '.') or '0')
                 for s in services
             ),
+            'recurring_plan': recurring_plan_id,
         }
 
         if stage_id:
