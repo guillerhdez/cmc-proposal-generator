@@ -473,26 +473,9 @@ def odoo_sync():
             'phone': phone, 'email_from': email_client,
             'description': desc, 'expected_revenue': total,
             'user_id': exec_uid or admin_uid,
-            'prorated_revenue': sum(
-                float(''.join(c for c in str(s.get('conditions',{}).get('installation','0'))
-                    if c.isdigit() or c == '.') or '0')
-                for s in services
-            ),
+
         }
 
-        # Coordenadas del primer servicio que las tenga
-        for s in services:
-            coords = (s.get('coordinates') or '').strip()
-            if coords:
-                try:
-                    parts = [p.strip() for p in coords.replace(',', ' ').split()]
-                    nums = [p for p in parts if p.replace('.','').replace('-','').isdigit()]
-                    if len(nums) >= 2:
-                        lead_vals['partner_latitude']  = float(nums[0])
-                        lead_vals['partner_longitude'] = float(nums[1])
-                except:
-                    pass
-                break
         if stage_id:
             lead_vals['stage_id'] = stage_id
 
@@ -508,6 +491,28 @@ def odoo_sync():
 
     except Exception as e:
         logger.error(f"Odoo sync error: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/odoo/fields', methods=['GET'])
+def odoo_fields():
+    """Diagnóstico: lista campos de crm.lead relacionados con revenue/coordenadas."""
+    try:
+        import xmlrpc.client
+        odoo_url   = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
+        admin_key  = os.environ.get('ODOO_API_KEY', '')
+        admin_user = os.environ.get('ODOO_USER', '')
+        found_db   = os.environ.get('ODOO_DB_INTERNAL', '')
+        common = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/common')
+        uid = common.authenticate(found_db, admin_user, admin_key, {})
+        models = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/object')
+        fields = models.execute_kw(found_db, uid, admin_key, 'crm.lead', 'fields_get', [],
+            {'attributes': ['string', 'type']})
+        relevant = {k: v for k, v in fields.items()
+            if any(w in k.lower() or w in v['string'].lower()
+                for w in ['revenue', 'prorat', 'lat', 'lon', 'coord', 'instal', 'install'])}
+        return jsonify(relevant)
+    except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
