@@ -259,46 +259,35 @@ def generate_pdf():
 
 @app.route('/api/odoo/login', methods=['POST'])
 def odoo_login():
-    """Autentica al ejecutivo contra Odoo usando REST API."""
+    """Valida credenciales contra Odoo usando API Key via XML-RPC."""
     try:
-        import requests as req
+        import xmlrpc.client
         data = request.get_json()
-        email    = data.get('email', '').strip()
-        password = data.get('password', '').strip()
+        email   = data.get('email', '').strip()
+        api_key = data.get('api_key', '').strip()
 
         odoo_url = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
+        odoo_db  = 'cmc-network.odoo.com'
 
-        # Autenticar via REST API
-        r = req.post(f'{odoo_url}/web/session/authenticate', json={
-            'jsonrpc': '2.0',
-            'method': 'call',
-            'params': {
-                'db': 'cmc-network.odoo.com',
-                'login': email,
-                'password': password,
-            }
-        }, timeout=15)
+        common = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/common')
+        uid = common.authenticate(odoo_db, email, api_key, {})
 
-        result = r.json()
-        if result.get('error'):
-            return jsonify({'error': result['error'].get('data', {}).get('message', 'Error de autenticación')}), 401
-
-        session = result.get('result', {})
-        uid = session.get('uid')
         if not uid:
-            return jsonify({'error': 'Usuario o contraseña incorrectos'}), 401
+            return jsonify({'error': 'Clave API o usuario incorrectos'}), 401
 
-        # Guardar la cookie de sesión
-        session_id = r.cookies.get('session_id', '')
+        models = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/object')
+        user_data = models.execute_kw(odoo_db, uid, api_key, 'res.users', 'read',
+            [[uid]], {'fields': ['name', 'login', 'partner_id']})
 
-        logger.info(f"Login exitoso: {email} (uid={uid})")
+        user = user_data[0] if user_data else {}
+        logger.info(f"Login OK: {email} uid={uid}")
+
         return jsonify({
             'success': True,
             'uid': uid,
-            'session_id': session_id,
-            'name': session.get('name', ''),
+            'name': user.get('name', ''),
             'email': email,
-            'partner_id': session.get('partner_id'),
+            'api_key': api_key,
         })
 
     except Exception as e:
@@ -309,10 +298,97 @@ def odoo_login():
 
 @app.route('/api/odoo/sync', methods=['POST'])
 def odoo_sync():
-    """Crea contacto y oportunidad en Odoo CRM usando REST API."""
+    """Crea contacto y oportunidad en Odoo usando XML-RPC con API Key."""
     try:
-        import requests as req
-        data = request.get_json()
+        import xmlrpc.client
+        data     = request.get_json()
+        odoo_url = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
+        odoo_db  = 'cmc-network.odoo.com'
+        email    = data.get('odoo_user', '')
+        api_key  = data.get('odoo_api_key', '') or os.environ.get('ODOO_API_KEY', '')
+        uid      = data.get('odoo_uid')
+
+        models = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/object')
+
+        # Verificar acceso
+        if not uid:
+            common = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/common')
+            uid = common.authenticate(odoo_db, email, api_key, {})
+        if not uid:
+            return jsonify({'error': 'No autenticado'}), 401
+
+        uid = int(uid)
+        client   = data.get('client', {})
+        services = data.get('services', [])
+
+        company_name = client.get('company', '')
+        contact_name = client.get('contact', '')
+        phone        = client.get('whatsapp', '')
+        email_client = client.get('email', '')
+
+        # 1. Buscar o crear empresa
+        existing = models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'search',
+            [[['name', '=', company_name]]])
+        partner_vals = {
+            'name': company_name, 'is_company': True,
+            'phone': phone, 'mobile': phone,
+            'comment': f'Giro: {client.get("sector", "")}',
+        }
+        if existing:
+            models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'write', [existing, partner_vals])
+            partner_id = existing[0]
+            partner_action = 'actualizado'
+        else:
+            partner_id = models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'create', [partner_vals])
+            partner_action = 'creado'
+
+        # 2. Contacto persona
+        contact_ex = models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'search',
+            [[['name', '=', contact_name], ['parent_id', '=', partner_id]]])
+        if not contact_ex:
+            models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'create', [{
+                'name': contact_name, 'parent_id': partner_id,
+                'type': 'contact', 'mobile': phone, 'email': email_client,
+            }])
+
+        # 3. Oportunidad CRM
+        desc = '\n'.join([
+            f"• {s.get('name','')}: {s.get('conditions',{}).get('monthly_rent','—')}/mes "
+            f"({s.get('conditions',{}).get('term','—')})"
+            for s in services
+        ])
+        total = sum(
+            float(''.join(c for c in str(s.get('conditions',{}).get('monthly_rent','0'))
+                if c.isdigit() or c == '.') or '0')
+            for s in services
+        )
+        stages = models.execute_kw(odoo_db, uid, api_key, 'crm.stage', 'search_read',
+            [[]], {'fields': ['id'], 'limit': 1, 'order': 'sequence asc'})
+        stage_id = stages[0]['id'] if stages else False
+
+        lead_vals = {
+            'name': f"Propuesta {company_name} — {', '.join(s.get('name','') for s in services)}",
+            'partner_id': partner_id, 'contact_name': contact_name,
+            'phone': phone, 'email_from': email_client,
+            'description': desc, 'expected_revenue': total,
+            'user_id': uid,
+        }
+        if stage_id:
+            lead_vals['stage_id'] = stage_id
+
+        lead_id = models.execute_kw(odoo_db, uid, api_key, 'crm.lead', 'create', [lead_vals])
+        logger.info(f"Odoo sync OK: partner={partner_id}, lead={lead_id}")
+
+        return jsonify({
+            'success': True,
+            'partner_id': partner_id,
+            'lead_id': lead_id,
+            'message': f'Contacto {partner_action} y oportunidad #{lead_id} creada en Odoo'
+        })
+
+    except Exception as e:
+        logger.error(f"Odoo sync error: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
 
         odoo_url    = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
         session_id  = data.get('odoo_session_id', '')
