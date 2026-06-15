@@ -993,7 +993,7 @@
                         phone:    document.getElementById('clientPhone')?.value || '',
                         whatsapp: document.getElementById('clientWhatsApp').value,
                         email:    document.getElementById('clientEmail').value,
-                        sector:   document.getElementById('clientSector').value,
+                        sector:   document.getElementById('clientBusiness')?.value || '',
                     },
                     services: services.map(s => ({
                         name:        s.name || '',
