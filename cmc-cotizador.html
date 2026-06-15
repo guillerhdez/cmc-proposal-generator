@@ -697,6 +697,8 @@
                 <button class="btn-secondary" onclick="goToStep(2)">← Atrás</button>
                 <button class="btn-success" id="downloadBtn" onclick="generateAndDownloadPDF()">📥 Descargar PDF</button>
                 <button class="btn-whatsapp" id="shareBtn" onclick="shareViaWhatsApp()" style="background: #25D366; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-left: 10px;">📱 Compartir por WhatsApp</button>
+                <button id="odooBtn" onclick="syncToOdoo()" style="background: #714B67; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; margin-left: 10px;">🔗 Enviar a Odoo</button>
+                <div id="odooStatus" style="margin-top: 10px; font-size: 14px; display: none;"></div>
             </div>
         </div>
     </div>
@@ -1263,6 +1265,42 @@
         const div = document.createElement('div');
         div.textContent = text || '';
         return div.innerHTML;
+    }
+
+    async function syncToOdoo() {
+        const btn = document.getElementById('odooBtn');
+        const status = document.getElementById('odooStatus');
+
+        btn.disabled = true;
+        btn.textContent = '⏳ Enviando...';
+        status.style.display = 'block';
+        status.style.color = '#714B67';
+        status.textContent = 'Conectando con Odoo...';
+
+        try {
+            const response = await fetch('/api/odoo/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(proposalData)
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                status.style.color = '#28a745';
+                status.textContent = `✅ ${result.message}`;
+                btn.textContent = '✅ Enviado a Odoo';
+            } else {
+                status.style.color = '#dc3545';
+                status.textContent = `❌ Error: ${result.error}`;
+                btn.disabled = false;
+                btn.textContent = '🔗 Enviar a Odoo';
+            }
+        } catch (e) {
+            status.style.color = '#dc3545';
+            status.textContent = `❌ Error de conexión: ${e.message}`;
+            btn.disabled = false;
+            btn.textContent = '🔗 Enviar a Odoo';
+        }
     }
 
     function shareViaWhatsApp() {

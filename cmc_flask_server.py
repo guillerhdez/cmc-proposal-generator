@@ -256,6 +256,126 @@ def generate_pdf():
         logger.error(f"Error generating PDF: {str(e)}")
         return jsonify({'error': f'Error generating PDF: {str(e)}'}), 500
 
+
+@app.route('/api/odoo/sync', methods=['POST'])
+def odoo_sync():
+    """Crea contacto y oportunidad en Odoo CRM a partir de los datos del formulario."""
+    try:
+        import xmlrpc.client
+        data = request.get_json()
+
+        odoo_url = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
+        odoo_db  = os.environ.get('ODOO_DB',  'cmc-network')
+        odoo_user = os.environ.get('ODOO_USER', 'ghernandez@cmcnetwork.mx')
+        odoo_key  = os.environ.get('ODOO_API_KEY', '')
+
+        # Autenticar
+        common = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/common')
+        uid = common.authenticate(odoo_db, odoo_user, odoo_key, {})
+        if not uid:
+            return jsonify({'error': 'Autenticación con Odoo fallida'}), 401
+
+        models = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/object')
+        client  = data.get('client', {})
+        services = data.get('services', [])
+
+        # ── 1. Crear o actualizar contacto ──────────────────────────────────
+        company_name = client.get('company', '')
+        contact_name = client.get('contact', '')
+        phone        = client.get('whatsapp', '')
+
+        # Buscar si ya existe el contacto por nombre de empresa
+        existing = models.execute_kw(odoo_db, uid, odoo_key, 'res.partner', 'search',
+            [[['name', '=', company_name]]])
+
+        partner_vals = {
+            'name':         company_name,
+            'phone':        phone,
+            'mobile':       phone,
+            'is_company':   True,
+            'comment':      f'Giro: {client.get("sector", "")}',
+        }
+
+        if existing:
+            models.execute_kw(odoo_db, uid, odoo_key, 'res.partner', 'write',
+                [existing, partner_vals])
+            partner_id = existing[0]
+            partner_action = 'actualizado'
+        else:
+            partner_id = models.execute_kw(odoo_db, uid, odoo_key, 'res.partner', 'create',
+                [partner_vals])
+            partner_action = 'creado'
+
+        # Contacto persona dentro de la empresa
+        contact_vals = {
+            'name':       contact_name,
+            'parent_id':  partner_id,
+            'type':       'contact',
+            'mobile':     phone,
+        }
+        existing_contact = models.execute_kw(odoo_db, uid, odoo_key, 'res.partner', 'search',
+            [[['name', '=', contact_name], ['parent_id', '=', partner_id]]])
+        if not existing_contact:
+            models.execute_kw(odoo_db, uid, odoo_key, 'res.partner', 'create', [contact_vals])
+
+        # ── 2. Crear oportunidad en CRM ─────────────────────────────────────
+        # Descripción con resumen de servicios
+        services_desc = '\n'.join([
+            f"• {s.get('name','')}: ${s.get('conditions',{}).get('monthly_rent','—')}/mes "
+            f"({s.get('conditions',{}).get('term','—')})"
+            for s in services
+        ])
+
+        # Ingreso esperado = suma de rentas mensuales
+        total = 0
+        for s in services:
+            rent = s.get('conditions', {}).get('monthly_rent', '0')
+            rent_clean = ''.join(c for c in str(rent) if c.isdigit() or c == '.')
+            try:
+                total += float(rent_clean)
+            except:
+                pass
+
+        # Buscar etapa inicial del CRM
+        stages = models.execute_kw(odoo_db, uid, odoo_key, 'crm.stage', 'search_read',
+            [[]], {'fields': ['id', 'name'], 'limit': 1, 'order': 'sequence asc'})
+        stage_id = stages[0]['id'] if stages else False
+
+        # Buscar usuario ejecutivo por email
+        executive = data.get('executive', {})
+        exec_email = executive.get('email', '')
+        exec_users = models.execute_kw(odoo_db, uid, odoo_key, 'res.users', 'search',
+            [[['login', '=', exec_email]]])
+        exec_user_id = exec_users[0] if exec_users else uid
+
+        lead_vals = {
+            'name':             f"Propuesta {company_name} — {', '.join(s.get('name','') for s in services)}",
+            'partner_id':       partner_id,
+            'contact_name':     contact_name,
+            'phone':            phone,
+            'description':      services_desc,
+            'expected_revenue': total,
+            'user_id':          exec_user_id,
+        }
+        if stage_id:
+            lead_vals['stage_id'] = stage_id
+
+        lead_id = models.execute_kw(odoo_db, uid, odoo_key, 'crm.lead', 'create', [lead_vals])
+
+        logger.info(f"Odoo sync OK: partner_id={partner_id} ({partner_action}), lead_id={lead_id}")
+        return jsonify({
+            'success': True,
+            'partner_id': partner_id,
+            'partner_action': partner_action,
+            'lead_id': lead_id,
+            'message': f'Contacto {partner_action} y oportunidad #{lead_id} creada en Odoo'
+        })
+
+    except Exception as e:
+        logger.error(f"Odoo sync error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
 @app.route('/cmc-cotizador.html', methods=['GET'])
 def serve_cotizador():
     """Sirve la app web del cotizador"""
