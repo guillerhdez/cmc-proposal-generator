@@ -311,12 +311,14 @@ def odoo_sync():
 
         # Autenticar — si ya tenemos uid del login, usarlo directamente
         common = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/common')
+        logger.info(f"Odoo sync: url={odoo_url}, db={odoo_db}, user={odoo_user}, uid={odoo_uid}")
         if odoo_uid:
             uid = int(odoo_uid)
         else:
             uid = common.authenticate(odoo_db, odoo_user, odoo_key, {})
+        logger.info(f"Odoo uid resultado: {uid}")
         if not uid:
-            return jsonify({'error': 'Autenticación con Odoo fallida'}), 401
+            return jsonify({'error': f'Autenticación fallida (db={odoo_db}, user={odoo_user})'}), 401
 
         models = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/object')
         client  = data.get('client', {})
@@ -418,8 +420,8 @@ def odoo_sync():
         })
 
     except Exception as e:
-        logger.error(f"Odoo sync error: {str(e)}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f"Odoo sync error: {str(e)}", exc_info=True)
+        return jsonify({'error': str(e), 'detail': repr(e)}), 500
 
 
 @app.route('/cmc-cotizador.html', methods=['GET'])

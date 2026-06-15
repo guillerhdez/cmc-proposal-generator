@@ -1371,7 +1371,7 @@
                 btn.textContent = '✅ Enviado a Odoo';
             } else {
                 status.style.color = '#dc3545';
-                status.textContent = `❌ Error: ${result.error}`;
+                status.textContent = `❌ Error: ${result.error} ${result.detail || ''}`;
                 btn.disabled = false;
                 btn.textContent = '🔗 Enviar a Odoo';
             }
