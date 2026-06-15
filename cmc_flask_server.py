@@ -474,6 +474,20 @@ def odoo_sync():
             'description': desc, 'expected_revenue': total,
             'user_id': exec_uid or admin_uid,
         }
+
+        # Coordenadas del primer servicio que las tenga
+        for s in services:
+            coords = (s.get('coordinates') or '').strip()
+            if coords:
+                try:
+                    parts = [p.strip() for p in coords.replace(',', ' ').split()]
+                    nums = [p for p in parts if p.replace('.','').replace('-','').isdigit()]
+                    if len(nums) >= 2:
+                        lead_vals['partner_latitude']  = float(nums[0])
+                        lead_vals['partner_longitude'] = float(nums[1])
+                except:
+                    pass
+                break
         if stage_id:
             lead_vals['stage_id'] = stage_id
 
