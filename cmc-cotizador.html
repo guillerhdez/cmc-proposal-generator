@@ -1364,10 +1364,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...proposalData,
-                    odoo_user:     odooSession?.email,
-                    odoo_password: odooSession?.password,
-                    odoo_uid:      odooSession?.uid,
-                    odoo_db:       odooSession?.db,
+                    odoo_session_id: odooSession?.session_id,
                 })
             });
             const result = await response.json();
