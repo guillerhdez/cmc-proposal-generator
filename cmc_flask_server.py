@@ -259,49 +259,51 @@ def generate_pdf():
 
 @app.route('/api/odoo/login', methods=['POST'])
 def odoo_login():
-    """Valida credenciales contra Odoo usando API Key via XML-RPC."""
+    """Verifica ejecutivo con email+contraseña. Usa API Key del admin para operaciones."""
     try:
         import xmlrpc.client
-        data = request.get_json()
-        email   = data.get('email', '').strip()
-        api_key = data.get('api_key', '').strip()
+        data      = request.get_json()
+        email     = data.get('email', '').strip()
+        password  = data.get('password', '').strip()
 
-        odoo_url = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
+        odoo_url   = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
+        admin_key  = os.environ.get('ODOO_API_KEY', '')
+        admin_user = os.environ.get('ODOO_USER', 'ghernandez@cmcnetwork.mx')
+        found_db   = os.environ.get('ODOO_DB_INTERNAL', '')
 
-        # Probar diferentes nombres de DB hasta encontrar el correcto
         common = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/common')
-        uid = None
-        found_db = None
-        for db_candidate in ['', 'cmc-network', 'cmc_network', 'cmcnetwork', 'cmc-network.odoo.com']:
-            try:
-                result = common.authenticate(db_candidate, email, api_key, {})
-                if result:
-                    uid = result
-                    found_db = db_candidate
-                    logger.info(f"DB encontrada: '{db_candidate}' uid={uid}")
-                    break
-            except Exception as ex:
-                logger.info(f"DB '{db_candidate}' falló: {str(ex)[:80]}")
-                continue
 
-        if not uid:
-            return jsonify({'error': 'No se pudo autenticar. Verifica tu email y clave API.'}), 401
+        # Detectar DB interna usando admin key
+        if not found_db:
+            for candidate in ['', 'cmc-network', 'cmc_network']:
+                try:
+                    r = common.authenticate(candidate, admin_user, admin_key, {})
+                    if r:
+                        found_db = candidate
+                        logger.info(f"DB interna: '{found_db}'")
+                        break
+                except:
+                    pass
 
-        odoo_db = found_db
-        models = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/object')
-        user_data = models.execute_kw(odoo_db, uid, api_key, 'res.users', 'read',
-            [[uid]], {'fields': ['name', 'login', 'partner_id']})
+        # Verificar credenciales del ejecutivo
+        exec_uid = common.authenticate(found_db, email, password, {})
+        if not exec_uid:
+            return jsonify({'error': 'Usuario o contraseña incorrectos'}), 401
 
+        # Obtener nombre usando admin key
+        admin_uid = common.authenticate(found_db, admin_user, admin_key, {})
+        models    = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/object')
+        user_data = models.execute_kw(found_db, admin_uid, admin_key, 'res.users', 'read',
+            [[exec_uid]], {'fields': ['name', 'login']})
         user = user_data[0] if user_data else {}
-        logger.info(f"Login OK: {email} uid={uid}")
 
+        logger.info(f"Login OK: {email} (uid={exec_uid})")
         return jsonify({
             'success': True,
-            'uid': uid,
-            'db': odoo_db,
-            'name': user.get('name', ''),
+            'uid':   exec_uid,
+            'db':    found_db,
+            'name':  user.get('name', email),
             'email': email,
-            'api_key': api_key,
         })
 
     except Exception as e:
@@ -316,11 +318,19 @@ def odoo_sync():
     try:
         import xmlrpc.client
         data     = request.get_json()
-        odoo_url = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
-        odoo_db  = data.get('odoo_db', 'cmc-network.odoo.com')
-        email    = data.get('odoo_user', '')
-        api_key  = data.get('odoo_api_key', '') or os.environ.get('ODOO_API_KEY', '')
-        uid      = data.get('odoo_uid')
+        odoo_url   = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
+        odoo_db    = data.get('odoo_db', os.environ.get('ODOO_DB_INTERNAL', ''))
+        admin_key  = os.environ.get('ODOO_API_KEY', '')
+        admin_user = os.environ.get('ODOO_USER', 'ghernandez@cmcnetwork.mx')
+        exec_uid   = data.get('odoo_uid')
+
+        common    = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/common')
+        admin_uid = common.authenticate(odoo_db, admin_user, admin_key, {})
+        if not admin_uid:
+            return jsonify({'error': 'Error de configuración del servidor'}), 500
+
+        api_key = admin_key
+        uid     = admin_uid
 
         models = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/object')
 
@@ -385,7 +395,7 @@ def odoo_sync():
             'partner_id': partner_id, 'contact_name': contact_name,
             'phone': phone, 'email_from': email_client,
             'description': desc, 'expected_revenue': total,
-            'user_id': uid,
+            'user_id': exec_uid or admin_uid,
         }
         if stage_id:
             lead_vals['stage_id'] = stage_id

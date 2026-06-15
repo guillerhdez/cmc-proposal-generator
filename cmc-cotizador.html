@@ -488,14 +488,13 @@
                 onkeydown="if(event.key==='Enter') doLogin()">
         </div>
         <div style="margin-bottom:24px;">
-            <label style="display:block; font-size:13px; font-weight:600; color:#333; margin-bottom:6px;">Clave API de Odoo</label>
+            <label style="display:block; font-size:13px; font-weight:600; color:#333; margin-bottom:6px;">Contraseña</label>
             <div style="position:relative;">
-                <input type="password" id="loginPassword" placeholder="Pega tu clave API aquí"
+                <input type="password" id="loginPassword" placeholder="••••••••"
                     style="width:100%; padding:10px 40px 10px 14px; border:1px solid #ddd; border-radius:6px; font-size:14px; outline:none;"
                     onkeydown="if(event.key==='Enter') doLogin()">
                 <span onclick="togglePassword()" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:16px; user-select:none;" id="eyeIcon">👁️</span>
             </div>
-            <div style="font-size:11px; color:#888; margin-top:4px;">Obtén tu clave en Odoo → Ajustes → Seguridad → Agregar clave API</div>
         </div>
         <div id="loginRemember" style="margin-bottom:20px; display:flex; align-items:center; gap:8px;">
             <input type="checkbox" id="rememberMe" checked style="width:16px; height:16px; cursor:pointer;">
@@ -1423,14 +1422,14 @@
     }
 
     async function doLogin() {
-        const email   = document.getElementById('loginEmail').value.trim();
-        const api_key = document.getElementById('loginPassword').value.trim();
+        const email    = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value.trim();
         const remember = document.getElementById('rememberMe').checked;
         const btn      = document.getElementById('loginBtn');
         const errDiv   = document.getElementById('loginError');
 
-        if (!email || !api_key) {
-            errDiv.textContent = 'Ingresa tu correo y clave API.';
+        if (!email || !password) {
+            errDiv.textContent = 'Ingresa tu correo y contraseña.';
             errDiv.style.display = 'block';
             return;
         }
@@ -1443,12 +1442,12 @@
             const res = await fetch('/api/odoo/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, api_key })
+                body: JSON.stringify({ email, password })
             });
             const data = await res.json();
 
             if (data.success) {
-                odooSession = { ...data, api_key };
+                odooSession = { ...data };
                 if (remember) {
                     localStorage.setItem('cmc_session', JSON.stringify(odooSession));
                 }
