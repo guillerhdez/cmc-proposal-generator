@@ -267,14 +267,27 @@ def odoo_login():
         api_key = data.get('api_key', '').strip()
 
         odoo_url = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
-        odoo_db  = 'cmc-network.odoo.com'
 
+        # Probar diferentes nombres de DB hasta encontrar el correcto
         common = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/common')
-        uid = common.authenticate(odoo_db, email, api_key, {})
+        uid = None
+        found_db = None
+        for db_candidate in ['', 'cmc-network', 'cmc_network', 'cmcnetwork', 'cmc-network.odoo.com']:
+            try:
+                result = common.authenticate(db_candidate, email, api_key, {})
+                if result:
+                    uid = result
+                    found_db = db_candidate
+                    logger.info(f"DB encontrada: '{db_candidate}' uid={uid}")
+                    break
+            except Exception as ex:
+                logger.info(f"DB '{db_candidate}' falló: {str(ex)[:80]}")
+                continue
 
         if not uid:
-            return jsonify({'error': 'Clave API o usuario incorrectos'}), 401
+            return jsonify({'error': 'No se pudo autenticar. Verifica tu email y clave API.'}), 401
 
+        odoo_db = found_db
         models = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/object')
         user_data = models.execute_kw(odoo_db, uid, api_key, 'res.users', 'read',
             [[uid]], {'fields': ['name', 'login', 'partner_id']})
@@ -285,6 +298,7 @@ def odoo_login():
         return jsonify({
             'success': True,
             'uid': uid,
+            'db': odoo_db,
             'name': user.get('name', ''),
             'email': email,
             'api_key': api_key,
@@ -303,7 +317,7 @@ def odoo_sync():
         import xmlrpc.client
         data     = request.get_json()
         odoo_url = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
-        odoo_db  = 'cmc-network.odoo.com'
+        odoo_db  = data.get('odoo_db', 'cmc-network.odoo.com')
         email    = data.get('odoo_user', '')
         api_key  = data.get('odoo_api_key', '') or os.environ.get('ODOO_API_KEY', '')
         uid      = data.get('odoo_uid')
