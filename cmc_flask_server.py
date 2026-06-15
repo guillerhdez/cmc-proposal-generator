@@ -496,15 +496,22 @@ def odoo_sync():
 
 @app.route('/api/odoo/fields', methods=['GET'])
 def odoo_fields():
-    """Diagnóstico: lista campos de crm.lead relacionados con revenue/coordenadas."""
     try:
         import xmlrpc.client
         odoo_url   = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
         admin_key  = os.environ.get('ODOO_API_KEY', '')
         admin_user = os.environ.get('ODOO_USER', '')
-        found_db   = os.environ.get('ODOO_DB_INTERNAL', '')
         common = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/common')
-        uid = common.authenticate(found_db, admin_user, admin_key, {})
+        uid, found_db = None, ''
+        for candidate in ['', 'cmc-network', 'cmc_network']:
+            try:
+                r = common.authenticate(candidate, admin_user, admin_key, {})
+                if r:
+                    uid, found_db = r, candidate
+                    break
+            except: pass
+        if not uid:
+            return jsonify({'error': 'No autenticado'}), 401
         models = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/object')
         fields = models.execute_kw(found_db, uid, admin_key, 'crm.lead', 'fields_get', [],
             {'attributes': ['string', 'type']})
