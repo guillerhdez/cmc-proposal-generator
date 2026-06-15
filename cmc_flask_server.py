@@ -443,62 +443,57 @@ def odoo_sync():
             else:
                 models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'create', [site_vals])
 
-        # 3. Oportunidad CRM
-        desc_lines = []
-        for s in services:
-            conds = s.get('conditions', {})
-            line = f"• {s.get('name','')}: ${conds.get('monthly_rent','—')}/mes ({conds.get('term','—')})"
-            if conds.get('installation'):
-                line += f" | Instalación: ${conds.get('installation')}"
-            if s.get('coordinates'):
-                line += f"\n  📍 Coordenadas: {s.get('coordinates')}"
-            if s.get('description'):
-                line += f"\n  📋 Descripción: {s.get('description')}"
-            if conds.get('special_conditions'):
-                line += f"\n  ⚠️ Condiciones especiales: {conds.get('special_conditions')}"
-            desc_lines.append(line)
-        desc = '\n\n'.join(desc_lines)
-        total = sum(
-            float(''.join(c for c in str(s.get('conditions',{}).get('monthly_rent','0'))
-                if c.isdigit() or c == '.') or '0')
-            for s in services
-        )
+        # 3. Una oportunidad por servicio
+        PLAN_MAP = {'12': 2, '24': 5, '36': 3}
         stages = models.execute_kw(odoo_db, uid, api_key, 'crm.stage', 'search_read',
             [[]], {'fields': ['id'], 'limit': 1, 'order': 'sequence asc'})
         stage_id = stages[0]['id'] if stages else False
 
-        # Mapeo de plazo a recurring_plan de Odoo
-        PLAN_MAP = {'12': 2, '24': 5, '36': 3}  # meses -> id plan
-        # Usar el plazo del primer servicio
-        first_term = (services[0].get('conditions', {}).get('term', '') if services else '')
-        term_months = ''.join(filter(str.isdigit, first_term.split()[0])) if first_term else ''
-        recurring_plan_id = PLAN_MAP.get(term_months, 1)  # default: Mes
+        lead_ids = []
+        for s in services:
+            conds = s.get('conditions', {})
+            rent = float(''.join(c for c in str(conds.get('monthly_rent','0'))
+                if c.isdigit() or c == '.') or '0')
+            install = float(''.join(c for c in str(conds.get('installation','0'))
+                if c.isdigit() or c == '.') or '0')
 
-        lead_vals = {
-            'name': f"Propuesta {company_name} — {', '.join(s.get('name','') for s in services)}",
-            'partner_id': partner_id, 'contact_name': contact_name,
-            'phone': phone, 'email_from': email_client,
-            'description': desc, 'expected_revenue': total,
-            'user_id': exec_uid or admin_uid,
-            'prorated_revenue': sum(
-                float(''.join(c for c in str(s.get('conditions',{}).get('installation','0'))
-                    if c.isdigit() or c == '.') or '0')
-                for s in services
-            ),
-            'recurring_plan': recurring_plan_id,
-        }
+            desc = f"• {s.get('name','')}: ${conds.get('monthly_rent','—')}/mes ({conds.get('term','—')})"
+            if install:
+                desc += f" | Instalación: ${conds.get('installation')}"
+            if s.get('coordinates'):
+                desc += f"\n📍 Coordenadas: {s.get('coordinates')}"
+            if s.get('description'):
+                desc += f"\n📋 Descripción: {s.get('description')}"
+            if conds.get('special_conditions'):
+                desc += f"\n⚠️ Condiciones especiales: {conds.get('special_conditions')}"
 
-        if stage_id:
-            lead_vals['stage_id'] = stage_id
+            term_str = (conds.get('term') or '').strip()
+            term_months = ''.join(filter(str.isdigit, term_str.split()[0])) if term_str else ''
+            recurring_plan_id = PLAN_MAP.get(term_months, 1)
 
-        lead_id = models.execute_kw(odoo_db, uid, api_key, 'crm.lead', 'create', [lead_vals])
-        logger.info(f"Odoo sync OK: partner={partner_id}, lead={lead_id}")
+            lead_vals = {
+                'name': f"Propuesta {company_name} — {s.get('name','')}",
+                'partner_id': partner_id, 'contact_name': contact_name,
+                'phone': phone, 'email_from': email_client,
+                'description': desc, 'expected_revenue': rent,
+                'prorated_revenue': install,
+                'recurring_plan': recurring_plan_id,
+                'user_id': exec_uid or admin_uid,
+            }
+            if stage_id:
+                lead_vals['stage_id'] = stage_id
+
+            lead_id = models.execute_kw(odoo_db, uid, api_key, 'crm.lead', 'create', [lead_vals])
+            lead_ids.append(lead_id)
+            logger.info(f"Lead creado: {lead_id} para {s.get('name','')}")
+
+        logger.info(f"Odoo sync OK: partner={partner_id}, leads={lead_ids}")
 
         return jsonify({
             'success': True,
             'partner_id': partner_id,
-            'lead_id': lead_id,
-            'message': f'Contacto {partner_action} y oportunidad #{lead_id} creada en Odoo'
+            'lead_ids': lead_ids,
+            'message': f'Contacto {partner_action} y {len(lead_ids)} oportunidad(es) creadas en Odoo'
         })
 
     except Exception as e:
