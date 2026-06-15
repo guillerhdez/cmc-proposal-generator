@@ -1348,8 +1348,23 @@
         return div.innerHTML;
     }
 
+    async function odooCall(model, method, args, kwargs) {
+        const res = await fetch('https://cmc-network.odoo.com/web/dataset/call_kw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+                jsonrpc: '2.0', method: 'call',
+                params: { model, method, args: args || [], kwargs: kwargs || {} }
+            })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.data?.message || JSON.stringify(data.error));
+        return data.result;
+    }
+
     async function syncToOdoo() {
-        const btn = document.getElementById('odooBtn');
+        const btn    = document.getElementById('odooBtn');
         const status = document.getElementById('odooStatus');
 
         btn.disabled = true;
@@ -1359,29 +1374,72 @@
         status.textContent = 'Conectando con Odoo...';
 
         try {
-            const response = await fetch('/api/odoo/sync', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ...proposalData,
-                    odoo_session_id: odooSession?.session_id,
-                })
-            });
-            const result = await response.json();
+            const client   = proposalData.client;
+            const services = proposalData.services;
 
-            if (result.success) {
-                status.style.color = '#28a745';
-                status.textContent = `✅ ${result.message}`;
-                btn.textContent = '✅ Enviado a Odoo';
+            // 1. Buscar o crear empresa
+            status.textContent = 'Creando contacto...';
+            const existing = await odooCall('res.partner', 'search',
+                [[['name', '=', client.company]]], {limit: 1});
+
+            const partnerVals = {
+                name: client.company, is_company: true,
+                phone: client.whatsapp, mobile: client.whatsapp,
+                comment: `Giro: ${client.sector || ''}`,
+            };
+
+            let partnerId;
+            if (existing.length > 0) {
+                await odooCall('res.partner', 'write', [[existing[0]], partnerVals], {});
+                partnerId = existing[0];
             } else {
-                status.style.color = '#dc3545';
-                status.textContent = `❌ Error: ${result.error}`;
-                btn.disabled = false;
-                btn.textContent = '🔗 Enviar a Odoo';
+                partnerId = await odooCall('res.partner', 'create', [partnerVals], {});
             }
-        } catch (e) {
+
+            // 2. Crear contacto persona
+            const contactEx = await odooCall('res.partner', 'search',
+                [[['name', '=', client.contact], ['parent_id', '=', partnerId]]], {limit: 1});
+            if (contactEx.length === 0) {
+                await odooCall('res.partner', 'create', [{
+                    name: client.contact, parent_id: partnerId,
+                    type: 'contact', mobile: client.whatsapp,
+                    email: client.email || '',
+                }], {});
+            }
+
+            // 3. Crear oportunidad
+            status.textContent = 'Creando oportunidad...';
+            const desc = services.map(s =>
+                `• ${s.name}: ${s.conditions?.monthly_rent || '—'}/mes (${s.conditions?.term || '—'})`
+            ).join('\n');
+
+            let total = 0;
+            services.forEach(s => {
+                const r = parseFloat((s.conditions?.monthly_rent || '0').replace(/[^0-9.]/g, ''));
+                if (!isNaN(r)) total += r;
+            });
+
+            const stages = await odooCall('crm.stage', 'search_read',
+                [[]], {fields: ['id'], limit: 1, order: 'sequence asc'});
+            const stageId = stages[0]?.id || false;
+
+            const leadVals = {
+                name: `Propuesta ${client.company} — ${services.map(s => s.name).join(', ')}`,
+                partner_id: partnerId, contact_name: client.contact,
+                phone: client.whatsapp, email_from: client.email || '',
+                description: desc, expected_revenue: total,
+            };
+            if (stageId) leadVals.stage_id = stageId;
+
+            const leadId = await odooCall('crm.lead', 'create', [leadVals], {});
+
+            status.style.color = '#28a745';
+            status.textContent = `✅ Contacto y oportunidad #${leadId} creados en Odoo`;
+            btn.textContent = '✅ Enviado a Odoo';
+
+        } catch(e) {
             status.style.color = '#dc3545';
-            status.textContent = `❌ Error de conexión: ${e.message}`;
+            status.textContent = `❌ Error: ${e.message}`;
             btn.disabled = false;
             btn.textContent = '🔗 Enviar a Odoo';
         }
@@ -1436,27 +1494,47 @@
         errDiv.style.display = 'none';
 
         try {
-            const res = await fetch('/api/odoo/login', {
+            // Llamar directamente a Odoo desde el browser
+            const res = await fetch('https://cmc-network.odoo.com/web/session/authenticate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
+                credentials: 'include',
+                body: JSON.stringify({
+                    jsonrpc: '2.0', method: 'call',
+                    params: {
+                        db: 'cmc-network.odoo.com',
+                        login: email,
+                        password: password,
+                    }
+                })
             });
             const data = await res.json();
+            const result = data.result || {};
 
-            if (data.success) {
-                odooSession = { ...data, password };
-                if (remember) {
-                    localStorage.setItem('cmc_session', JSON.stringify(odooSession));
-                }
-                showApp();
-            } else {
-                errDiv.textContent = data.error || 'Error de autenticación';
+            if (data.error || !result.uid) {
+                const msg = data.error?.data?.message || 'Usuario o contraseña incorrectos';
+                errDiv.textContent = msg;
                 errDiv.style.display = 'block';
                 btn.disabled = false;
                 btn.textContent = 'Iniciar sesión';
+                return;
             }
-        } catch (e) {
-            errDiv.textContent = 'Error de conexión. Intenta de nuevo.';
+
+            odooSession = {
+                uid:        result.uid,
+                name:       result.name,
+                email:      email,
+                password:   password,
+                partner_id: result.partner_id,
+            };
+
+            if (remember) {
+                localStorage.setItem('cmc_session', JSON.stringify(odooSession));
+            }
+            showApp();
+
+        } catch(e) {
+            errDiv.textContent = `Error de conexión: ${e.message}`;
             errDiv.style.display = 'block';
             btn.disabled = false;
             btn.textContent = 'Iniciar sesión';
