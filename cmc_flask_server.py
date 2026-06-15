@@ -353,20 +353,30 @@ def odoo_sync():
         phone        = client.get('whatsapp', '')
         email_client = client.get('email', '')
 
-        # Parsear direcciones
-        fiscal = client.get('fiscal', {})
-        site   = client.get('site', {})
-        site_same = client.get('site_same_as_fiscal', True)
+        # Buscar ID de México en Odoo
+        mx = models.execute_kw(odoo_db, uid, api_key, 'res.country', 'search',
+            [[['code', '=', 'MX']]])
+        country_mx = mx[0] if mx else False
+
+        def get_state_id(state_name):
+            if not state_name or not country_mx:
+                return False
+            states = models.execute_kw(odoo_db, uid, api_key, 'res.country.state', 'search',
+                [[['name', 'ilike', state_name], ['country_id', '=', country_mx]]])
+            return states[0] if states else False
 
         def build_street(addr):
-            parts = [addr.get('street',''), addr.get('ext_number',''), addr.get('int_number','')]
-            return ' '.join(p for p in parts if p).strip()
+            calle = addr.get('street', '').strip()
+            ext   = addr.get('ext_number', '').strip()
+            int_  = addr.get('int_number', '').strip()
+            parts = [p for p in [calle, ext, int_] if p]
+            return ' '.join(parts)
 
-        fiscal_street = build_street(fiscal)
-        fiscal_city   = fiscal.get('municipality', '')
-        fiscal_state  = fiscal.get('state', '')
-        fiscal_zip    = fiscal.get('zip', '')
-        fiscal_col    = fiscal.get('neighborhood', '')
+        fiscal_street  = build_street(fiscal)
+        fiscal_col     = fiscal.get('neighborhood', '')
+        fiscal_city    = fiscal.get('municipality', '')
+        fiscal_zip     = fiscal.get('zip', '')
+        fiscal_state_id = get_state_id(fiscal.get('state', ''))
 
         # 1. Buscar o crear empresa
         existing = models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'search',
@@ -374,12 +384,15 @@ def odoo_sync():
         partner_vals = {
             'name': company_name, 'is_company': True,
             'phone': phone,
-            'street':  fiscal_street,
-            'street2': fiscal_col,
-            'city':    fiscal_city,
-            'zip':     fiscal_zip,
+            'street':     fiscal_street,
+            'street2':    fiscal_col,
+            'city':       fiscal_city,
+            'zip':        fiscal_zip,
+            'country_id': country_mx,
             'comment': f'Giro: {client.get("sector", "")}',
         }
+        if fiscal_state_id:
+            partner_vals['state_id'] = fiscal_state_id
         if existing:
             models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'write', [existing, partner_vals])
             partner_id = existing[0]
@@ -400,21 +413,25 @@ def odoo_sync():
 
         # 3. Dirección del sitio (si es diferente a la fiscal)
         if not site_same:
-            site_street = build_street(site)
-            site_col    = site.get('neighborhood', '')
-            site_city   = site.get('municipality', '')
-            site_zip    = site.get('zip', '')
+            site_street   = build_street(site)
+            site_col      = site.get('neighborhood', '')
+            site_city     = site.get('municipality', '')
+            site_zip      = site.get('zip', '')
+            site_state_id = get_state_id(site.get('state', ''))
             site_ex = models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'search',
                 [[['parent_id', '=', partner_id], ['type', '=', 'delivery']]])
             site_vals = {
                 'name': f'{company_name} - Sitio',
                 'parent_id': partner_id,
                 'type': 'delivery',
-                'street':  site_street,
-                'street2': site_col,
-                'city':    site_city,
-                'zip':     site_zip,
+                'street':     site_street,
+                'street2':    site_col,
+                'city':       site_city,
+                'zip':        site_zip,
+                'country_id': country_mx,
             }
+            if site_state_id:
+                site_vals['state_id'] = site_state_id
             if site_ex:
                 models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'write', [site_ex, site_vals])
             else:
