@@ -517,12 +517,16 @@ def odoo_fields():
         if not uid:
             return jsonify({'error': 'No autenticado'}), 401
         models = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/object')
+        # Buscar planes recurrentes disponibles
+        plans = models.execute_kw(found_db, uid, admin_key, 'crm.recurring.plan', 'search_read',
+            [[]], {'fields': ['id', 'name', 'number_of_months']})
+        # Buscar campos relevantes de crm.lead
         fields = models.execute_kw(found_db, uid, admin_key, 'crm.lead', 'fields_get', [],
             {'attributes': ['string', 'type']})
         relevant = {k: v for k, v in fields.items()
             if any(w in k.lower() or w in v['string'].lower()
-                for w in ['revenue', 'prorat', 'lat', 'lon', 'coord', 'instal', 'install'])}
-        return jsonify(relevant)
+                for w in ['revenue', 'prorat', 'lat', 'lon', 'coord', 'instal', 'install', 'plan', 'recurring'])}
+        return jsonify({'plans': plans, 'fields': relevant})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
