@@ -472,11 +472,51 @@
 </head>
 <body>
 
+<!-- PANTALLA DE LOGIN -->
+<div id="loginScreen" style="display:none; min-height:100vh; background:linear-gradient(135deg,#001F3D 0%,#004D7A 100%); display:flex; align-items:center; justify-content:center;">
+    <div style="background:white; border-radius:12px; padding:40px; width:100%; max-width:380px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+        <div style="text-align:center; margin-bottom:30px;">
+            <div style="font-size:24px; font-weight:bold; color:#001F3D;">
+                <span style="color:#00BCD4;">CMC</span> Network
+            </div>
+            <p style="color:#666; margin-top:8px; font-size:14px;">Generador de Propuestas</p>
+        </div>
+        <div style="margin-bottom:16px;">
+            <label style="display:block; font-size:13px; font-weight:600; color:#333; margin-bottom:6px;">Correo electrónico</label>
+            <input type="email" id="loginEmail" placeholder="usuario@cmcnetwork.mx"
+                style="width:100%; padding:10px 14px; border:1px solid #ddd; border-radius:6px; font-size:14px; outline:none;"
+                onkeydown="if(event.key==='Enter') doLogin()">
+        </div>
+        <div style="margin-bottom:24px;">
+            <label style="display:block; font-size:13px; font-weight:600; color:#333; margin-bottom:6px;">Contraseña</label>
+            <input type="password" id="loginPassword" placeholder="••••••••"
+                style="width:100%; padding:10px 14px; border:1px solid #ddd; border-radius:6px; font-size:14px; outline:none;"
+                onkeydown="if(event.key==='Enter') doLogin()">
+        </div>
+        <div id="loginRemember" style="margin-bottom:20px; display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="rememberMe" checked style="width:16px; height:16px; cursor:pointer;">
+            <label for="rememberMe" style="font-size:13px; color:#555; cursor:pointer;">Recordar sesión</label>
+        </div>
+        <button onclick="doLogin()" id="loginBtn"
+            style="width:100%; padding:12px; background:#001F3D; color:white; border:none; border-radius:6px; font-size:15px; font-weight:bold; cursor:pointer;">
+            Iniciar sesión
+        </button>
+        <div id="loginError" style="display:none; margin-top:12px; padding:10px; background:#fff0f0; border:1px solid #ffcccc; border-radius:6px; color:#c0392b; font-size:13px; text-align:center;"></div>
+    </div>
+</div>
+
+<!-- APP PRINCIPAL -->
+<div id="mainApp" style="display:none;">
 <div class="container">
     <header>
         <div class="logo"><span class="logo-cyan">CMC</span> Network</div>
         <h1>Generador de Propuestas Comerciales</h1>
         <p class="subtitle">Crea propuestas personalizadas en segundos</p>
+        <div style="margin-top:12px; font-size:13px; color:#666;">
+            <span id="loggedUserName"></span>
+            &nbsp;·&nbsp;
+            <a href="#" onclick="doLogout()" style="color:#00BCD4; text-decoration:none;">Cerrar sesión</a>
+        </div>
     </header>
 
     <div class="progress-bar">
@@ -1281,7 +1321,12 @@
             const response = await fetch('/api/odoo/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(proposalData)
+                body: JSON.stringify({
+                    ...proposalData,
+                    odoo_user:     odooSession?.email,
+                    odoo_password: odooSession?.password,
+                    odoo_uid:      odooSession?.uid,
+                })
             });
             const result = await response.json();
 
@@ -1319,13 +1364,93 @@
         window.open(url, '_blank');
     }
 
+    // ========== AUTENTICACIÓN ODOO ==========
+    let odooSession = null;
+
+    async function doLogin() {
+        const email    = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value;
+        const remember = document.getElementById('rememberMe').checked;
+        const btn      = document.getElementById('loginBtn');
+        const errDiv   = document.getElementById('loginError');
+
+        if (!email || !password) {
+            errDiv.textContent = 'Ingresa tu correo y contraseña.';
+            errDiv.style.display = 'block';
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = 'Verificando...';
+        errDiv.style.display = 'none';
+
+        try {
+            const res = await fetch('/api/odoo/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                odooSession = { ...data, password };
+                if (remember) {
+                    localStorage.setItem('cmc_session', JSON.stringify(odooSession));
+                }
+                showApp();
+            } else {
+                errDiv.textContent = data.error || 'Error de autenticación';
+                errDiv.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Iniciar sesión';
+            }
+        } catch (e) {
+            errDiv.textContent = 'Error de conexión. Intenta de nuevo.';
+            errDiv.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Iniciar sesión';
+        }
+    }
+
+    function showApp() {
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('loggedUserName').textContent = odooSession.name;
+    }
+
+    function doLogout() {
+        localStorage.removeItem('cmc_session');
+        odooSession = null;
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('loginEmail').value = '';
+        document.getElementById('loginPassword').value = '';
+        document.getElementById('loginBtn').disabled = false;
+        document.getElementById('loginBtn').textContent = 'Iniciar sesión';
+    }
+
     // ========== INICIALIZACIÓN ==========
     document.addEventListener('DOMContentLoaded', () => {
-        addService(); // Agregar un servicio inicial
+        addService();
         renderServices();
         updateProgressBar();
+
+        // Verificar sesión guardada
+        const saved = localStorage.getItem('cmc_session');
+        if (saved) {
+            try {
+                odooSession = JSON.parse(saved);
+                showApp();
+            } catch(e) {
+                localStorage.removeItem('cmc_session');
+                document.getElementById('loginScreen').style.display = 'flex';
+            }
+        } else {
+            document.getElementById('loginScreen').style.display = 'flex';
+        }
     });
 </script>
 
+</div> <!-- /mainApp -->
 </body>
 </html>

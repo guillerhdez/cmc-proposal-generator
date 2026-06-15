@@ -257,21 +257,64 @@ def generate_pdf():
         return jsonify({'error': f'Error generating PDF: {str(e)}'}), 500
 
 
-@app.route('/api/odoo/sync', methods=['POST'])
+@app.route('/api/odoo/login', methods=['POST'])
+def odoo_login():
+    """Autentica al ejecutivo contra Odoo y devuelve sus datos."""
+    try:
+        import xmlrpc.client
+        data = request.get_json()
+        email    = data.get('email', '').strip()
+        password = data.get('password', '').strip()
+
+        odoo_url = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
+        odoo_db  = os.environ.get('ODOO_DB',  'cmc-network')
+
+        common = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/common')
+        uid = common.authenticate(odoo_db, email, password, {})
+        if not uid:
+            return jsonify({'error': 'Usuario o contraseña incorrectos'}), 401
+
+        # Obtener datos del usuario
+        models = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/object')
+        user_data = models.execute_kw(odoo_db, uid, password, 'res.users', 'read',
+            [[uid]], {'fields': ['name', 'login', 'email', 'partner_id']})
+
+        user = user_data[0] if user_data else {}
+        logger.info(f"Login exitoso: {email} (uid={uid})")
+
+        return jsonify({
+            'success': True,
+            'uid': uid,
+            'name': user.get('name', ''),
+            'email': email,
+            'partner_id': user.get('partner_id', [None])[0],
+        })
+
+    except Exception as e:
+        logger.error(f"Odoo login error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+
 def odoo_sync():
     """Crea contacto y oportunidad en Odoo CRM a partir de los datos del formulario."""
     try:
         import xmlrpc.client
         data = request.get_json()
 
-        odoo_url = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
-        odoo_db  = os.environ.get('ODOO_DB',  'cmc-network')
-        odoo_user = os.environ.get('ODOO_USER', 'ghernandez@cmcnetwork.mx')
-        odoo_key  = os.environ.get('ODOO_API_KEY', '')
+        odoo_url  = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
+        odoo_db   = os.environ.get('ODOO_DB',  'cmc-network')
+        # Usar credenciales del ejecutivo logueado, con fallback al admin
+        odoo_user = data.get('odoo_user') or os.environ.get('ODOO_USER', 'ghernandez@cmcnetwork.mx')
+        odoo_key  = data.get('odoo_password') or os.environ.get('ODOO_API_KEY', '')
+        odoo_uid  = data.get('odoo_uid')
 
-        # Autenticar
+        # Autenticar — si ya tenemos uid del login, usarlo directamente
         common = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/common')
-        uid = common.authenticate(odoo_db, odoo_user, odoo_key, {})
+        if odoo_uid:
+            uid = int(odoo_uid)
+        else:
+            uid = common.authenticate(odoo_db, odoo_user, odoo_key, {})
         if not uid:
             return jsonify({'error': 'Autenticación con Odoo fallida'}), 401
 
