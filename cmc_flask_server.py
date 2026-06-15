@@ -296,6 +296,7 @@ def odoo_login():
 
 
 
+@app.route('/api/odoo/sync', methods=['POST'])
 def odoo_sync():
     """Crea contacto y oportunidad en Odoo CRM a partir de los datos del formulario."""
     try:
