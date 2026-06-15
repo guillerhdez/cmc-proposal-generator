@@ -353,12 +353,31 @@ def odoo_sync():
         phone        = client.get('whatsapp', '')
         email_client = client.get('email', '')
 
+        # Parsear direcciones
+        fiscal = client.get('fiscal', {})
+        site   = client.get('site', {})
+        site_same = client.get('site_same_as_fiscal', True)
+
+        def build_street(addr):
+            parts = [addr.get('street',''), addr.get('ext_number',''), addr.get('int_number','')]
+            return ' '.join(p for p in parts if p).strip()
+
+        fiscal_street = build_street(fiscal)
+        fiscal_city   = fiscal.get('municipality', '')
+        fiscal_state  = fiscal.get('state', '')
+        fiscal_zip    = fiscal.get('zip', '')
+        fiscal_col    = fiscal.get('neighborhood', '')
+
         # 1. Buscar o crear empresa
         existing = models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'search',
             [[['name', '=', company_name]]])
         partner_vals = {
             'name': company_name, 'is_company': True,
             'phone': phone,
+            'street':  fiscal_street,
+            'street2': fiscal_col,
+            'city':    fiscal_city,
+            'zip':     fiscal_zip,
             'comment': f'Giro: {client.get("sector", "")}',
         }
         if existing:
@@ -376,7 +395,30 @@ def odoo_sync():
             models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'create', [{
                 'name': contact_name, 'parent_id': partner_id,
                 'type': 'contact', 'email': email_client,
+                'phone': phone,
             }])
+
+        # 3. Dirección del sitio (si es diferente a la fiscal)
+        if not site_same:
+            site_street = build_street(site)
+            site_col    = site.get('neighborhood', '')
+            site_city   = site.get('municipality', '')
+            site_zip    = site.get('zip', '')
+            site_ex = models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'search',
+                [[['parent_id', '=', partner_id], ['type', '=', 'delivery']]])
+            site_vals = {
+                'name': f'{company_name} - Sitio',
+                'parent_id': partner_id,
+                'type': 'delivery',
+                'street':  site_street,
+                'street2': site_col,
+                'city':    site_city,
+                'zip':     site_zip,
+            }
+            if site_ex:
+                models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'write', [site_ex, site_vals])
+            else:
+                models.execute_kw(odoo_db, uid, api_key, 'res.partner', 'create', [site_vals])
 
         # 3. Oportunidad CRM
         desc = '\n'.join([
