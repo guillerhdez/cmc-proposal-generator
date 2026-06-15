@@ -473,6 +473,11 @@ def odoo_sync():
             'phone': phone, 'email_from': email_client,
             'description': desc, 'expected_revenue': total,
             'user_id': exec_uid or admin_uid,
+            'prorated_revenue': sum(
+                float(''.join(c for c in str(s.get('conditions',{}).get('installation','0'))
+                    if c.isdigit() or c == '.') or '0')
+                for s in services
+            ),
         }
 
         # Coordenadas del primer servicio que las tenga
