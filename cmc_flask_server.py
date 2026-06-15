@@ -267,12 +267,31 @@ def odoo_login():
         password = data.get('password', '').strip()
 
         odoo_url = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
-        odoo_db  = os.environ.get('ODOO_DB',  'cmc-network')
+        odoo_db  = os.environ.get('ODOO_DB', '')
 
         common = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/common')
-        uid = common.authenticate(odoo_db, email, password, {})
+
+        # Auto-detectar DB probando candidatos comunes
+        uid = None
+        detected_db = odoo_db
+        if not odoo_db:
+            for candidate in ['cmc-network', 'cmc_network', 'cmcnetwork']:
+                try:
+                    test = common.authenticate(candidate, email, password, {})
+                    if test:
+                        uid = test
+                        detected_db = candidate
+                        logger.info(f"DB detectada: {detected_db}")
+                        break
+                except:
+                    pass
+        else:
+            uid = common.authenticate(odoo_db, email, password, {})
+
         if not uid:
             return jsonify({'error': 'Usuario o contraseña incorrectos'}), 401
+
+        odoo_db = detected_db
 
         # Obtener datos del usuario
         models = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/object')
@@ -285,6 +304,7 @@ def odoo_login():
         return jsonify({
             'success': True,
             'uid': uid,
+            'db': odoo_db,
             'name': user.get('name', ''),
             'email': email,
             'partner_id': user.get('partner_id', [None])[0],
@@ -304,11 +324,31 @@ def odoo_sync():
         data = request.get_json()
 
         odoo_url  = os.environ.get('ODOO_URL', 'https://cmc-network.odoo.com')
-        odoo_db   = os.environ.get('ODOO_DB',  'cmc-network')
-        # Usar credenciales del ejecutivo logueado, con fallback al admin
+        odoo_db   = data.get('odoo_db') or os.environ.get('ODOO_DB', '')
         odoo_user = data.get('odoo_user') or os.environ.get('ODOO_USER', 'ghernandez@cmcnetwork.mx')
         odoo_key  = data.get('odoo_password') or os.environ.get('ODOO_API_KEY', '')
         odoo_uid  = data.get('odoo_uid')
+
+        common = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/common')
+
+        # Auto-detectar DB si no está disponible
+        if not odoo_db:
+            for candidate in ['cmc-network', 'cmc_network', 'cmcnetwork']:
+                try:
+                    test = common.authenticate(candidate, odoo_user, odoo_key, {})
+                    if test:
+                        odoo_db = candidate
+                        if not odoo_uid:
+                            odoo_uid = test
+                        logger.info(f"DB detectada en sync: {odoo_db}")
+                        break
+                except:
+                    pass
+
+        if not odoo_db:
+            return jsonify({'error': 'No se pudo detectar la base de datos de Odoo'}), 500
+
+        logger.info(f"Odoo sync: url={odoo_url}, db={odoo_db}, user={odoo_user}, uid={odoo_uid}")
 
         # Autenticar — si ya tenemos uid del login, usarlo directamente
         common = xmlrpc.client.ServerProxy(f'{odoo_url}/xmlrpc/2/common')

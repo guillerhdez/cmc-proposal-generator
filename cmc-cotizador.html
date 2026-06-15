@@ -1361,6 +1361,7 @@
                     odoo_user:     odooSession?.email,
                     odoo_password: odooSession?.password,
                     odoo_uid:      odooSession?.uid,
+                    odoo_db:       odooSession?.db,
                 })
             });
             const result = await response.json();
@@ -1371,7 +1372,7 @@
                 btn.textContent = '✅ Enviado a Odoo';
             } else {
                 status.style.color = '#dc3545';
-                status.textContent = `❌ Error: ${result.error} ${result.detail || ''}`;
+                status.textContent = `❌ Error: ${result.error}`;
                 btn.disabled = false;
                 btn.textContent = '🔗 Enviar a Odoo';
             }
