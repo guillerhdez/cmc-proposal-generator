@@ -1359,13 +1359,14 @@
         status.textContent = 'Conectando con Odoo...';
 
         try {
+            console.log('proposalData en sync:', JSON.stringify(proposalData));
             const response = await fetch('/api/odoo/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    ...proposalData,
-                    odoo_user:    odooSession?.email,
-                    odoo_api_key: odooSession?.api_key,
+                    client:       proposalData?.client   || {},
+                    services:     proposalData?.services || [],
+                    executive:    proposalData?.executive || {},
                     odoo_uid:     odooSession?.uid,
                     odoo_db:      odooSession?.db,
                 })

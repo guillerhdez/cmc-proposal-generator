@@ -346,6 +346,7 @@ def odoo_sync():
         services = data.get('services', [])
 
         logger.info(f"Sync data - client: {client}, services count: {len(services)}")
+        logger.info(f"Full data keys: {list(data.keys())}")
 
         company_name = client.get('company', '')
         contact_name = client.get('contact', '')
