@@ -326,6 +326,7 @@ def odoo_sync():
         company_name = client.get('company', '')
         contact_name = client.get('contact', '')
         phone        = client.get('whatsapp', '')
+        email        = client.get('email', '')
 
         # Buscar si ya existe el contacto por nombre de empresa
         existing = models.execute_kw(odoo_db, uid, odoo_key, 'res.partner', 'search',
@@ -355,6 +356,7 @@ def odoo_sync():
             'parent_id':  partner_id,
             'type':       'contact',
             'mobile':     phone,
+            'email':      email,
         }
         existing_contact = models.execute_kw(odoo_db, uid, odoo_key, 'res.partner', 'search',
             [[['name', '=', contact_name], ['parent_id', '=', partner_id]]])
@@ -396,6 +398,7 @@ def odoo_sync():
             'partner_id':       partner_id,
             'contact_name':     contact_name,
             'phone':            phone,
+            'email_from':       email,
             'description':      services_desc,
             'expected_revenue': total,
             'user_id':          exec_user_id,
