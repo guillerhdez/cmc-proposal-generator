@@ -1187,10 +1187,17 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Plazo</label>
+                            ${service.name === 'Internet para Eventos' ? `
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <input type="number" min="1" value="${service.conditions.term ? service.conditions.term.replace(/[^0-9]/g,'') : ''}"
+                                       onchange="updateService(${service.id}, 'conditions.term', this.value + ' días')"
+                                       placeholder="Ej: 3" style="width:80px;">
+                                <span style="color:var(--text-gray); font-size:14px;">días</span>
+                            </div>` : `
                             <select onchange="updateService(${service.id}, 'conditions.term', this.value)">
                                 <option value="">-- Selecciona plazo --</option>
                                 ${termOptions.map(opt => `<option value="${opt}" ${service.conditions.term === opt ? 'selected' : ''}>${opt}</option>`).join('')}
-                            </select>
+                            </select>`}
                         </div>
                         <div class="form-group">
                             <label>Renta Mensual</label>
