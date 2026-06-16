@@ -1133,10 +1133,24 @@
                 service[field] = value;
             }
 
+            // Al seleccionar Internet para Eventos, limpiar plazos de todos
+            if (field === 'name' && value === 'Internet para Eventos') {
+                services.forEach(s => { s.conditions.term = ''; });
+            }
+
+            // Al quitar Internet para Eventos y no quedar ninguno, limpiar días
+            if (field === 'name' && value !== 'Internet para Eventos') {
+                if (!services.some(s => s.name === 'Internet para Eventos')) {
+                    services.forEach(s => { s.conditions.term = ''; });
+                }
+            }
+
             // Si es propuesta de evento y se cambia el plazo, sincronizar todos
             if (field === 'conditions.term' && services.some(s => s.name === 'Internet para Eventos')) {
                 services.forEach(s => { s.conditions.term = value; });
             }
+
+            renderServices();
         }
     }
 
