@@ -1119,6 +1119,12 @@
             } else {
                 service[field] = value;
             }
+
+            // Si es propuesta de evento y se cambia el plazo, sincronizar todos
+            if (field === 'conditions.term' && services.some(s => s.name === 'Internet para Eventos')) {
+                services.forEach(s => { s.conditions.term = value; });
+            }
+
             renderServices();
         }
     }
