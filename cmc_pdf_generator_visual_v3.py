@@ -86,11 +86,10 @@ class CMCProposalGeneratorV3:
             is_first_page[0] = False
 
         # Páginas 1-4: imágenes institucionales
-        # Página 1 (portada): dibuja imagen y sobreescribe datos del ejecutivo
+        # Página 1 (portada): cover mode + logo + datos ejecutivo
         new_page()
         img_path = os.path.join(self.images_dir, '1.jpeg')
-        self._draw_institutional_page(c, img_path)
-        # Sobreescribir datos del ejecutivo en la portada
+        self._draw_cover_page(c, img_path)
         executive = proposal_data.get('executive', {})
         self._draw_executive_overlay(c, executive)
 
@@ -162,6 +161,32 @@ class CMCProposalGeneratorV3:
             c.rect(0, 0, ox + 1, PH, stroke=0, fill=1)
             c.rect(PW - ox - 1, 0, ox + 1, PH, stroke=0, fill=1)
 
+    def _draw_cover_page(self, c, img_path):
+        """Portada: imagen en cover mode (llena toda la página, recorta exceso) + logo arriba izquierda."""
+        PW, PH = self.PAGE_W, self.PAGE_H
+
+        # Fondo dark blue por si acaso
+        c.setFillColor(self.dark_blue)
+        c.rect(0, 0, PW, PH, stroke=0, fill=1)
+
+        if os.path.exists(img_path):
+            try:
+                img = ImageReader(img_path)
+                iw, ih = img.getSize()
+                img_ratio = iw / float(ih)
+                page_ratio = PW / float(PH)
+
+                # Cover: imagen ya tiene ratio correcto, llena toda la página
+                draw_w = PW
+                draw_h = PH
+                ox = 0
+                oy = 0
+                c.drawImage(img, ox, oy, width=draw_w, height=draw_h, mask='auto')
+            except Exception:
+                pass
+
+        # Logo ya viene en la imagen de fondo — no dibujamos encima
+
     def _draw_executive_overlay(self, c, executive):
         """Sobreescribe los datos del ejecutivo en la portada."""
         PW, PH = self.PAGE_W, self.PAGE_H
@@ -173,25 +198,30 @@ class CMCProposalGeneratorV3:
         if not name:
             return
 
-        ex = 50  # x position
-        ey = PH * 0.15  # y base desde abajo
+        ex = PW * 0.04
+        font_size = PH * 0.048
+        line_gap = font_size * 1.35
 
-        # Tapar el área original con fondo oscuro - área más grande para cubrir texto original
-        c.setFillColor(HexColor('#060E1C'))
-        c.rect(0, ey - 10, PW * 0.55, PH * 0.28, stroke=0, fill=1)
+        y3 = PH * 0.08
+        y2 = y3 + line_gap
+        y1 = y2 + line_gap
 
-        # Nombre | Título
         c.setFillColor(HexColor('#FFFFFF'))
-        c.setFont('Helvetica-Bold', 18)
-        name_title = f"{name} | {title}"
-        c.drawString(ex, ey + PH * 0.13, name_title)
 
-        # Email
-        c.setFont('Helvetica', 15)
-        c.drawString(ex, ey + PH * 0.07, email)
+        # Línea 1: nombre (regular) + " | " + título (bold)
+        c.setFont('Helvetica', font_size)
+        name_part = f"{name} | "
+        name_w = c.stringWidth(name_part, 'Helvetica', font_size)
+        c.drawString(ex, y1, name_part)
+        c.setFont('Helvetica-Bold', font_size)
+        c.drawString(ex + name_w, y1, title)
 
-        # Teléfono
-        c.drawString(ex, ey + PH * 0.02, phone)
+        # Línea 2: email
+        c.setFont('Helvetica', font_size)
+        c.drawString(ex, y2, email)
+
+        # Línea 3: teléfono
+        c.drawString(ex, y3, phone)
 
     def _draw_contain_image(self, c, img_path, x, y, w, h):
         """Dibuja imagen contenida dentro del rectángulo, centrada con barras del color de marca."""
