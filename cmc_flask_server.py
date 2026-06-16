@@ -469,7 +469,11 @@ def odoo_sync():
 
             term_str = (conds.get('term') or '').strip()
             term_months = ''.join(filter(str.isdigit, term_str.split()[0])) if term_str else ''
-            recurring_plan_id = PLAN_MAP.get(term_months, 1)
+            # Si el plazo es en días o no es 12/24/36 meses -> Mes (id=1)
+            if 'día' in term_str.lower() or 'dia' in term_str.lower():
+                recurring_plan_id = 1
+            else:
+                recurring_plan_id = PLAN_MAP.get(term_months, 1)
 
             lead_vals = {
                 'name': f"Propuesta {company_name} — {s.get('name','')}",
