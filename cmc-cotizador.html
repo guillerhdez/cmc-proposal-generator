@@ -1110,6 +1110,19 @@
         renderServices();
     }
 
+    function syncEventDays(days) {
+        if (!days) return;
+        const term = days + ' días';
+        // Actualizar el modelo de todos los servicios
+        services.forEach(s => { s.conditions.term = term; });
+        // Actualizar los otros inputs de días en el DOM sin re-renderizar
+        document.querySelectorAll('.days-input').forEach(input => {
+            if (document.activeElement !== input) {
+                input.value = days;
+            }
+        });
+    }
+
     function updateService(id, field, value) {
         const service = services.find(s => s.id === id);
         if (service) {
@@ -1124,8 +1137,6 @@
             if (field === 'conditions.term' && services.some(s => s.name === 'Internet para Eventos')) {
                 services.forEach(s => { s.conditions.term = value; });
             }
-
-            renderServices();
         }
     }
 
@@ -1196,7 +1207,8 @@
                             ${services.some(s => s.name === 'Internet para Eventos') ? `
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <input type="number" min="1" value="${service.conditions.term ? service.conditions.term.replace(/[^0-9]/g,'') : ''}"
-                                       onchange="updateService(${service.id}, 'conditions.term', this.value + ' días')"
+                                       class="days-input"
+                                       oninput="syncEventDays(this.value)"
                                        placeholder="Ej: 3" style="width:80px;">
                                 <span style="color:var(--text-gray); font-size:14px;">días</span>
                             </div>` : `
