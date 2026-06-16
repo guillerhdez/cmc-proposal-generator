@@ -1506,6 +1506,21 @@
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
         document.getElementById('loggedUserName').textContent = odooSession.name;
+
+        // Autoseleccionar ejecutivo según el email logueado
+        const emailMap = {
+            'dflores@cmcnetwork.mx':    'daniel_flores',
+            'jramirez@cmcnetwork.mx':   'julio_ramirez',
+            'g.comercial@cmcnetworkmx.com': 'tania_quijada',
+        };
+        const execId = emailMap[odooSession.email?.toLowerCase()];
+        if (execId) {
+            const sel = document.getElementById('executive');
+            if (sel) {
+                sel.value = execId;
+                updateExecutiveInfo();
+            }
+        }
     }
 
     function doLogout() {
