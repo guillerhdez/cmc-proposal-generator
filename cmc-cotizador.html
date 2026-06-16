@@ -1228,8 +1228,14 @@
     function generateAndDownloadPDF() {
         if (!validateStep(2)) return;
 
-        const execSelect = document.getElementById('executive');
-        const execId = execSelect.value;
+        // Determinar ejecutivo: si hay sesión de ejecutivo, usarla; si no, leer del select
+        const emailMap = {
+            'dflores@cmcnetwork.mx':        'daniel_flores',
+            'jramirez@cmcnetwork.mx':       'julio_ramirez',
+            'g.comercial@cmcnetworkmx.com': 'tania_quijada',
+        };
+        const sessionEmail = odooSession?.email?.toLowerCase() || '';
+        const execId = emailMap[sessionEmail] || document.getElementById('executive').value;
         const executive = EXECUTIVES[execId] || {};
 
         proposalData = {
