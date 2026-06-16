@@ -1197,7 +1197,7 @@
                                style="${!service.coordinates ? 'border-color: var(--cyan);' : ''}">
                         <small style="color: var(--text-gray); display: block; margin-top: 4px;">
                             Latitud, Longitud del sitio donde se instalará el servicio.
-                            <small style="color: var(--text-gray);">Latitud, Longitud del sitio donde se instalará el servicio.</small>
+                            <small style="color: var(--text-gray);">Latitud, Longitud del sitio donde se instalará el servicio. ${service.coordinates ? `<a href="https://www.google.com/maps?q=${encodeURIComponent(service.coordinates)}" target="_blank">Ver en Google Maps →</a>` : 'Tip: en Google Maps, mantén presionado el punto exacto y copia las coordenadas.'}</small>
                         </small>
                     </div>
                     ` : ''}
