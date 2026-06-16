@@ -51,7 +51,7 @@ class CMCProposalGeneratorV3:
 
 
     def __init__(self, images_dir=None):
-        self.images_dir = images_dir or os.path.dirname(__file__)
+        self.images_dir = images_dir or os.path.join(os.path.dirname(__file__), 'images')
         self.dark_blue = HexColor('#001F3D')
         self.cyan = HexColor('#00BCD4')
         self.panel_bg = HexColor('#F0F4F8')
@@ -156,17 +156,12 @@ class CMCProposalGeneratorV3:
             c.rect(PW - ox - 1, 0, ox + 1, PH, stroke=0, fill=1)
 
     def _draw_contain_image(self, c, img_path, x, y, w, h):
-        """Dibuja una imagen 'contenida' dentro del rectángulo (x,y,w,h),
-        sin recortar, centrada, sobre un fondo del color de marca
-        (para que las barras resultantes se mezclen con el fondo oscuro
-        de las propias slides en lugar de verse como espacio en blanco)."""
-
+        """Dibuja imagen contenida dentro del rectángulo, centrada con barras del color de marca."""
         c.setFillColor(self.dark_blue)
         c.rect(x, y, w, h, stroke=0, fill=1)
 
         if not os.path.exists(img_path):
             return
-
         try:
             img = ImageReader(img_path)
             iw, ih = img.getSize()
@@ -177,11 +172,13 @@ class CMCProposalGeneratorV3:
         rect_ratio = w / float(h)
 
         if img_ratio > rect_ratio:
+            # imagen más ancha que el rect — ajustar por ancho
             draw_w = w
             draw_h = w / img_ratio
             ox = x
             oy = y + (h - draw_h) / 2.0
         else:
+            # imagen más alta — ajustar por alto
             draw_h = h
             draw_w = h * img_ratio
             ox = x + (w - draw_w) / 2.0
@@ -257,7 +254,7 @@ class CMCProposalGeneratorV3:
         service_name = service.get('name', '')
         img_filename = self.SERVICE_IMAGES.get(service_name, '05-telefonia-ip.jpg')
         img_path = os.path.join(self.images_dir, img_filename)
-        self._draw_stretch_image(c, img_path, 0, 0, PW, PH)
+        self._draw_contain_image(c, img_path, 0, 0, PW, PH)
 
     # Bounds de la tabla nativa en cada slide de condiciones del VIP
     # (left%, right%, top%, bottom%) — medidos y confirmados visualmente
