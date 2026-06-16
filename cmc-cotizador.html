@@ -1193,6 +1193,7 @@
                         <label>📍 Coordenadas del Sitio *</label>
                         <input type="text" value="${service.coordinates || ''}"
                                onchange="updateService(${service.id}, 'coordinates', this.value)"
+                               oninput="updateService(${service.id}, 'coordinates', this.value)"
                                placeholder="Ej: 19.432608, -99.133209"
                                style="${!service.coordinates ? 'border-color: var(--cyan);' : ''}">
                         <small style="color: var(--text-gray); display: block; margin-top: 4px;">
