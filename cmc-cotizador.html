@@ -980,7 +980,8 @@
             if (step === 3) {
                 renderSummary();
                 // Construir proposalData global para Odoo y PDF
-                const executive = EXECUTIVES[document.getElementById('executive').value] || {};
+                const execId2 = window._lockedExecId || document.getElementById('executive').value;
+                const executive = EXECUTIVES[execId2] || {};
                 proposalData = {
                     executive: {
                         name: executive.name || '',
@@ -1268,8 +1269,8 @@
     function generateAndDownloadPDF() {
         if (!validateStep(2)) return;
 
-        // Obtener ejecutivo: primero del selector del DOM (siempre refleja lo que el usuario ve)
-        const execId = document.getElementById('executive').value;
+        // Obtener ejecutivo: usar el bloqueado por sesión o el del selector
+        const execId = window._lockedExecId || document.getElementById('executive').value;
         const executive = EXECUTIVES[execId] || {};
 
         proposalData = {
@@ -1558,6 +1559,7 @@
         };
         const execId = emailMap[odooSession.email?.toLowerCase()];
         if (execId) {
+            window._lockedExecId = execId;
             const sel = document.getElementById('executive');
             if (sel) {
                 sel.value = execId;
@@ -1566,10 +1568,9 @@
                 updateExecutiveInfo();
             }
         } else {
-            // Admin: selector libre
+            window._lockedExecId = null;
             const sel = document.getElementById('executive');
             if (sel) {
-                sel.disabled = false;
                 sel.style.pointerEvents = '';
                 sel.style.opacity = '';
             }
