@@ -198,8 +198,7 @@ def generate_pdf():
     """
     try:
         data = request.get_json()
-        
-        # Validar datos
+        logger.info(f"PDF request - executive: {data.get('executive', {})}")
         if not data:
             return jsonify({'error': 'No JSON data provided'}), 400
         
