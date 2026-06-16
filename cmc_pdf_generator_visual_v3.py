@@ -323,16 +323,23 @@ class CMCProposalGeneratorV3:
             cond_path = os.path.join(self.images_dir, cond_filename)
             c.setFillColor(self.dark_blue)
             c.rect(0, 0, PW, PH, stroke=0, fill=1)
-            self._draw_stretch_image(c, cond_path, 0, 0, PW, PH)
+            # Renderizar imagen al 90% centrada
+            scale = 0.90
+            img_w = PW * scale
+            img_h = PH * scale
+            img_x = (PW - img_w) / 2
+            img_y = (PH - img_h) / 2
+            self._draw_stretch_image(c, cond_path, img_x, img_y, img_w, img_h)
 
             # Tapar tabla nativa con rectángulo del color del fondo oscuro
+            # Los bounds son % de la imagen, que ahora ocupa 90% de la página centrada
             bounds = self.SERVICE_COND_TABLE_BOUNDS.get(service_name, (0, 0.53, 0.21, 0.88))
             bl, br, bt, bb = bounds
-            cover_x = PW * bl
-            cover_w = PW * (br - bl)
-            cover_y = PH * (1.0 - bb)
-            cover_h = PH * (bb - bt)
-            cover_h = PH * (bb - bt)
+            # Convertir % de imagen a coordenadas absolutas en página
+            cover_x = img_x + img_w * bl
+            cover_w = img_w * (br - bl)
+            cover_y = img_y + img_h * (1.0 - bb)
+            cover_h = img_h * (bb - bt)
             c.setFillColor(self.dark_blue)
             c.rect(cover_x, cover_y, cover_w, cover_h, stroke=0, fill=1)
         else:
@@ -352,10 +359,10 @@ class CMCProposalGeneratorV3:
         if has_cond_slide:
             bounds = self.SERVICE_COND_TABLE_BOUNDS.get(service_name, (0, 0.53, 0.21, 0.88))
             bl, br, bt, bb = bounds
-            panel_x = PW * bl
-            panel_w = PW * br - panel_x
-            panel_y = PH * (1.0 - bb)
-            panel_h_actual = PH * (bb - bt)
+            panel_x = img_x + img_w * bl
+            panel_w = img_w * (br - bl)
+            panel_y = img_y + img_h * (1.0 - bb)
+            panel_h_actual = img_h * (bb - bt)
         else:
             panel_x = 0
             panel_w = PW * 0.42
