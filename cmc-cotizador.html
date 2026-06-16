@@ -1227,15 +1227,17 @@
     // ========== GENERACIÓN DE PDF ==========
     function generateAndDownloadPDF() {
         if (!validateStep(2)) return;
-        
-        const executive = EXECUTIVES[document.getElementById('executive').value];
-        
+
+        const execSelect = document.getElementById('executive');
+        const execId = execSelect.value;
+        const executive = EXECUTIVES[execId] || {};
+
         proposalData = {
             executive: {
-                name: executive.name,
-                title: executive.title,
-                email: executive.email,
-                phone: executive.phone
+                name:  executive.name  || '',
+                title: executive.title || '',
+                email: executive.email || '',
+                phone: executive.phone || ''
             },
             client: {
                 company: document.getElementById('clientCompany').value,
@@ -1519,13 +1521,18 @@
             const sel = document.getElementById('executive');
             if (sel) {
                 sel.value = execId;
-                sel.disabled = true; // bloquear selector para ejecutivos
+                sel.style.pointerEvents = 'none';
+                sel.style.opacity = '0.7';
                 updateExecutiveInfo();
             }
         } else {
             // Admin: selector libre
             const sel = document.getElementById('executive');
-            if (sel) sel.disabled = false;
+            if (sel) {
+                sel.disabled = false;
+                sel.style.pointerEvents = '';
+                sel.style.opacity = '';
+            }
         }
     }
 
