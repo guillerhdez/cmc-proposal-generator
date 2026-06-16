@@ -1508,9 +1508,10 @@
         document.getElementById('loggedUserName').textContent = odooSession.name;
 
         // Autoseleccionar ejecutivo según el email logueado
+        // Admin (ghernandez) puede elegir libremente
         const emailMap = {
-            'dflores@cmcnetwork.mx':    'daniel_flores',
-            'jramirez@cmcnetwork.mx':   'julio_ramirez',
+            'dflores@cmcnetwork.mx':        'daniel_flores',
+            'jramirez@cmcnetwork.mx':       'julio_ramirez',
             'g.comercial@cmcnetworkmx.com': 'tania_quijada',
         };
         const execId = emailMap[odooSession.email?.toLowerCase()];
@@ -1518,8 +1519,13 @@
             const sel = document.getElementById('executive');
             if (sel) {
                 sel.value = execId;
+                sel.disabled = true; // bloquear selector para ejecutivos
                 updateExecutiveInfo();
             }
+        } else {
+            // Admin: selector libre
+            const sel = document.getElementById('executive');
+            if (sel) sel.disabled = false;
         }
     }
 
