@@ -85,9 +85,16 @@ class CMCProposalGeneratorV3:
                 c.showPage()
             is_first_page[0] = False
 
-        # Páginas 1-4: imágenes institucionales (contain sobre fondo de marca,
-        # para no recortar texto que está cerca de los bordes)
-        for img_file in ['1.jpeg', '2.jpeg', '3.jpeg', '4.jpeg']:
+        # Páginas 1-4: imágenes institucionales
+        # Página 1 (portada): dibuja imagen y sobreescribe datos del ejecutivo
+        new_page()
+        img_path = os.path.join(self.images_dir, '1.jpeg')
+        self._draw_institutional_page(c, img_path)
+        # Sobreescribir datos del ejecutivo en la portada
+        executive = proposal_data.get('executive', {})
+        self._draw_executive_overlay(c, executive)
+
+        for img_file in ['2.jpeg', '3.jpeg', '4.jpeg']:
             new_page()
             img_path = os.path.join(self.images_dir, img_file)
             self._draw_institutional_page(c, img_path)
@@ -154,6 +161,37 @@ class CMCProposalGeneratorV3:
         if ox > 0:
             c.rect(0, 0, ox + 1, PH, stroke=0, fill=1)
             c.rect(PW - ox - 1, 0, ox + 1, PH, stroke=0, fill=1)
+
+    def _draw_executive_overlay(self, c, executive):
+        """Sobreescribe los datos del ejecutivo en la portada."""
+        PW, PH = self.PAGE_W, self.PAGE_H
+        name  = executive.get('name', '')
+        title = executive.get('title', '')
+        email = executive.get('email', '')
+        phone = executive.get('phone', '')
+
+        if not name:
+            return
+
+        ex = 50  # x position
+        ey = PH * 0.15  # y base desde abajo
+
+        # Tapar el área original con fondo oscuro - área más grande para cubrir texto original
+        c.setFillColor(HexColor('#060E1C'))
+        c.rect(0, ey - 10, PW * 0.55, PH * 0.28, stroke=0, fill=1)
+
+        # Nombre | Título
+        c.setFillColor(HexColor('#FFFFFF'))
+        c.setFont('Helvetica-Bold', 18)
+        name_title = f"{name} | {title}"
+        c.drawString(ex, ey + PH * 0.13, name_title)
+
+        # Email
+        c.setFont('Helvetica', 15)
+        c.drawString(ex, ey + PH * 0.07, email)
+
+        # Teléfono
+        c.drawString(ex, ey + PH * 0.02, phone)
 
     def _draw_contain_image(self, c, img_path, x, y, w, h):
         """Dibuja imagen contenida dentro del rectángulo, centrada con barras del color de marca."""
