@@ -1187,7 +1187,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Plazo</label>
-                            ${service.name === 'Internet para Eventos' ? `
+                            ${services.some(s => s.name === 'Internet para Eventos') ? `
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <input type="number" min="1" value="${service.conditions.term ? service.conditions.term.replace(/[^0-9]/g,'') : ''}"
                                        onchange="updateService(${service.id}, 'conditions.term', this.value + ' días')"
