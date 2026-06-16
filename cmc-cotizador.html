@@ -1268,14 +1268,8 @@
     function generateAndDownloadPDF() {
         if (!validateStep(2)) return;
 
-        // Determinar ejecutivo: si hay sesión de ejecutivo, usarla; si no, leer del select
-        const emailMap = {
-            'dflores@cmcnetwork.mx':        'daniel_flores',
-            'jramirez@cmcnetwork.mx':       'julio_ramirez',
-            'g.comercial@cmcnetworkmx.com': 'tania_quijada',
-        };
-        const sessionEmail = odooSession?.email?.toLowerCase() || '';
-        const execId = emailMap[sessionEmail] || document.getElementById('executive').value;
+        // Obtener ejecutivo: primero del selector del DOM (siempre refleja lo que el usuario ve)
+        const execId = document.getElementById('executive').value;
         const executive = EXECUTIVES[execId] || {};
 
         proposalData = {
