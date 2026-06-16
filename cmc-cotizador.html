@@ -1141,6 +1141,13 @@
     }
 
     function renderServices() {
+        // Si es propuesta de evento, sincronizar todos los plazos al mismo valor
+        const isEventProposal = services.some(s => s.name === 'Internet para Eventos');
+        if (isEventProposal) {
+            const refTerm = services.find(s => s.conditions.term)?.conditions.term;
+            if (refTerm) services.forEach(s => { s.conditions.term = refTerm; });
+        }
+
         const container = document.getElementById('servicesContainer');
         container.innerHTML = '';
         
