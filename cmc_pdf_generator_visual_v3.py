@@ -523,6 +523,23 @@ class CMCProposalGeneratorV3:
                 c.line(x, 0, x + PH, PH)
             c.restoreState()
 
+            # Número del servicio + título arriba izquierda
+            service_number = {
+                'Internet para Eventos': '02',
+                'Soluciones IoT': '07', 'CCTV Cableado y redes de WIFI': '07',
+            }.get(service_name, '')
+            # Título estilo slide VIP — sin número, solo nombre en bold blanco
+            if service_number:
+                # Puntos decorativos arriba izquierda (igual que slide VIP)
+                c.setFillColor(HexColor('#1A3A6B'))
+                for row in range(5):
+                    for col in range(5):
+                        c.circle(PW * 0.04 + col * 9, PH - PH * 0.04 - row * 9, 1.5, fill=1, stroke=0)
+                # Título: blanco bold, tamaño grande igual que slide VIP
+                c.setFillColor(HexColor('#FFFFFF'))
+                c.setFont('Helvetica-Bold', 24)
+                c.drawString(PW * 0.04, PH - PH * 0.15, service_name)
+
         # ── 2. PANEL con tabla — posicionado según bounds calibrados ───────
         if has_cond_slide:
             bounds = self.SERVICE_COND_TABLE_BOUNDS.get(service_name, (0, 0.53, 0.21, 0.88))
@@ -536,7 +553,7 @@ class CMCProposalGeneratorV3:
             panel_y = _iy + _ih * (1.0 - bb)
             panel_h_actual = _ih * (bb - bt)
         else:
-            panel_x = 0
+            panel_x = (PW - PW * 0.42) / 2.0  # centrado
             panel_w = PW * 0.42
             panel_h_actual = panel_h
             panel_y = (PH - panel_h) / 2.0
@@ -545,11 +562,12 @@ class CMCProposalGeneratorV3:
         c.setFillColor(self.dark_blue)
         c.rect(panel_x, panel_y, panel_w, panel_h_actual, stroke=0, fill=1)
 
-        # Borde cyan
+        # 4 bordes cyan iguales
         c.setFillColor(self.cyan)
-        c.rect(panel_x + panel_w - 2, panel_y, 2, panel_h_actual, stroke=0, fill=1)
-        c.rect(panel_x, panel_y, panel_w, 2, stroke=0, fill=1)
-        c.rect(panel_x, panel_y + panel_h_actual - 2, panel_w, 2, stroke=0, fill=1)
+        c.rect(panel_x, panel_y, panel_w, 2, stroke=0, fill=1)                          # abajo
+        c.rect(panel_x, panel_y + panel_h_actual - 2, panel_w, 2, stroke=0, fill=1)     # arriba
+        c.rect(panel_x, panel_y, 2, panel_h_actual, stroke=0, fill=1)                   # izquierda
+        c.rect(panel_x + panel_w - 2, panel_y, 2, panel_h_actual, stroke=0, fill=1)     # derecha
 
         # ── 3. TÍTULO ──────────────────────────────────────────────────────
         y_cursor = panel_y + panel_h_actual - pad
