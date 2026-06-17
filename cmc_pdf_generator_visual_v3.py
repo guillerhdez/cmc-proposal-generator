@@ -328,7 +328,7 @@ class CMCProposalGeneratorV3:
     # (left%, right%, top%, bottom%) — medidos y confirmados visualmente
     SERVICE_COND_TABLE_BOUNDS = {
         'Internet Dedicado':        (0.00,  0.516, 0.21,  0.88),
-        'Internet para Eventos':    (0.00,  0.57,  0.245, 0.70),
+        'Internet para Eventos':    (0.04,  0.50,  0.22,  0.72),
         'Internet Satelital':       (0.00,  0.53,  0.20,  0.888),
         'Conectividad LTE':         (0.00,  0.527, 0.21,  0.885),
         'Telefonía IP':             (0.00,  0.54,  0.213, 0.58),
@@ -339,13 +339,114 @@ class CMCProposalGeneratorV3:
     # Servicios que usan slide como fondo para página de condiciones
     SERVICES_WITH_COND_SLIDE = {
         'Internet Dedicado',
-        'Internet para Eventos',
         'Internet Satelital',
         'Conectividad LTE',
         'Telefonía IP',
         'Telefonía IP / Cloud PBX',
         'Ciberseguridad Integral',
     }
+
+    def _draw_eventos_background(self, c):
+        """Dibuja fondo de página de condiciones de Eventos en ReportLab puro,
+        replicando el diseño del slide VIP: fondo azul, foto concierto derecha,
+        puntos arriba izq, número 02, título y logos de clientes abajo."""
+        from reportlab.lib.colors import white
+        PW, PH = self.PAGE_W, self.PAGE_H
+        cyan = HexColor('#00BCD4')
+        dark_blue = HexColor('#001F3D')
+        mid_blue = HexColor('#002B5C')
+
+        # Fondo azul oscuro
+        c.setFillColor(dark_blue)
+        c.rect(0, 0, PW, PH, stroke=0, fill=1)
+
+        # Triángulos decorativos fondo (esquina superior derecha)
+        c.saveState()
+        c.setFillColor(mid_blue)
+        p = c.beginPath()
+        p.moveTo(PW * 0.55, PH)
+        p.lineTo(PW, PH)
+        p.lineTo(PW, PH * 0.45)
+        p.close()
+        c.drawPath(p, fill=1, stroke=0)
+        p2 = c.beginPath()
+        p2.moveTo(PW * 0.65, PH * 0.55)
+        p2.lineTo(PW * 0.82, PH * 0.55)
+        p2.lineTo(PW * 0.55, PH * 0.20)
+        p2.close()
+        c.drawPath(p2, fill=1, stroke=0)
+        c.restoreStore = c.restoreState
+        c.restoreState()
+
+        # Foto concierto — parte derecha (crop derecha de 02-internet-eventos.jpg)
+        foto_path = os.path.join(self.images_dir, '02-internet-eventos.jpg')
+        if os.path.exists(foto_path):
+            try:
+                foto_x = PW * 0.60
+                foto_y = PH * 0.13
+                foto_w = PW * 0.40
+                foto_h = PH * 0.72
+                # Clip redondeado
+                c.saveState()
+                p = c.beginPath()
+                r = 8
+                p.moveTo(foto_x + r, foto_y)
+                p.lineTo(foto_x + foto_w - r, foto_y)
+                p.arcTo(foto_x + foto_w - r, foto_y, foto_x + foto_w, foto_y + r, -90, 90)
+                p.lineTo(foto_x + foto_w, foto_y + foto_h - r)
+                p.arcTo(foto_x + foto_w - r, foto_y + foto_h - r, foto_x + foto_w, foto_y + foto_h, 0, 90)
+                p.lineTo(foto_x + r, foto_y + foto_h)
+                p.arcTo(foto_x, foto_y + foto_h - r, foto_x + r, foto_y + foto_h, 90, 90)
+                p.lineTo(foto_x, foto_y + r)
+                p.arcTo(foto_x, foto_y, foto_x + r, foto_y + r, 180, 90)
+                p.close()
+                c.clipPath(p, stroke=0)
+                c.drawImage(ImageReader(foto_path), foto_x, foto_y,
+                            width=foto_w, height=foto_h, mask='auto')
+                c.restoreState()
+            except Exception:
+                pass
+
+        # Puntos decorativos arriba izquierda
+        c.setFillColor(HexColor('#1A3A6B'))
+        dot_r = 1.5
+        for row in range(6):
+            for col in range(6):
+                dx = PW * 0.03 + col * 10
+                dy = PH - PH * 0.05 - row * 10
+                c.circle(dx, dy, dot_r, fill=1, stroke=0)
+
+        # Número "02" en cyan
+        c.setFillColor(cyan)
+        c.setFont('Helvetica-Bold', 13)
+        c.drawString(PW * 0.10, PH - PH * 0.12, '02')
+
+        # Título
+        c.setFillColor(white)
+        c.setFont('Helvetica-Bold', 20)
+        c.drawString(PW * 0.14, PH - PH * 0.12, 'Internet Dedicado para eventos')
+
+        # Barra cyan abajo
+        c.setFillColor(cyan)
+        c.rect(0, PH * 0.03, PW * 0.60, 4, stroke=0, fill=1)
+
+        # Logos de clientes — abajo izquierda
+        logos_info = [
+            ('Papalote', '🎭'),
+            ('Formula 1', 'F1'),
+            ('Tecate Pa\'l Norte', 'TPN'),
+            ('Corona Capital', 'CC'),
+        ]
+        logo_y = PH * 0.06
+        logo_w = PW * 0.10
+        logo_h = PH * 0.14
+        for i, (name, _) in enumerate(logos_info):
+            lx = PW * 0.03 + i * (logo_w + PW * 0.02)
+            c.setFillColor(white)
+            c.roundRect(lx, logo_y, logo_w, logo_h, 4, fill=1, stroke=0)
+            c.setFillColor(dark_blue)
+            c.setFont('Helvetica-Bold', 5)
+            c.drawCentredString(lx + logo_w/2, logo_y + logo_h/2 - 3, name)
 
     def _draw_service_conditions_page(self, c, service):
         """Página 2 por servicio:
@@ -386,35 +487,34 @@ class CMCProposalGeneratorV3:
 
         # ── 1. FONDO ───────────────────────────────────────────────────────
         if has_cond_slide:
-            # Fondo = slide de condiciones — estirado para que bounds % coincidan exactamente
             cond_filename = self.SERVICE_COND_IMAGES.get(service_name, '01-internet-dedicado-cond.jpg')
             cond_path = os.path.join(self.images_dir, cond_filename)
             c.setFillColor(self.dark_blue)
             c.rect(0, 0, PW, PH, stroke=0, fill=1)
-            # Renderizar imagen al 90% centrada
-            scale = 0.90
-            img_w = PW * scale
-            img_h = PH * scale
-            img_x = (PW - img_w) / 2
-            img_y = (PH - img_h) / 2
-            self._draw_stretch_image(c, cond_path, img_x, img_y, img_w, img_h)
+            if service_name == 'Internet para Eventos':
+                self._draw_contain_image(c, cond_path, 0, 0, PW, PH)
+            else:
+                img_w = PW * 0.90
+                img_h = PH * 0.90
+                img_x = (PW - img_w) / 2
+                img_y = (PH - img_h) / 2
+                self._draw_stretch_image(c, cond_path, img_x, img_y, img_w, img_h)
 
-            # Tapar tabla nativa con rectángulo del color del fondo oscuro
-            # Los bounds son % de la imagen, que ahora ocupa 90% de la página centrada
-            bounds = self.SERVICE_COND_TABLE_BOUNDS.get(service_name, (0, 0.53, 0.21, 0.88))
-            bl, br, bt, bb = bounds
-            # Convertir % de imagen a coordenadas absolutas en página
-            cover_x = img_x + img_w * bl
-            cover_w = img_w * (br - bl)
-            cover_y = img_y + img_h * (1.0 - bb)
-            cover_h = img_h * (bb - bt)
-            c.setFillColor(self.dark_blue)
-            c.rect(cover_x, cover_y, cover_w, cover_h, stroke=0, fill=1)
+            # Tapar tabla nativa — solo para servicios que tienen tabla en el slide VIP
+            # Eventos no tiene tabla nativa, la imagen ya viene limpia
+            if service_name != 'Internet para Eventos':
+                bounds = self.SERVICE_COND_TABLE_BOUNDS.get(service_name, (0, 0.53, 0.21, 0.88))
+                bl, br, bt, bb = bounds
+                cover_x = img_x + img_w * bl
+                cover_w = img_w * (br - bl)
+                cover_y = img_y + img_h * (1.0 - bb)
+                cover_h = img_h * (bb - bt)
+                c.setFillColor(self.dark_blue)
+                c.rect(cover_x, cover_y, cover_w, cover_h, stroke=0, fill=1)
         else:
             # Fondo azul marino institucional con patrón geométrico
             c.setFillColor(self.dark_blue)
             c.rect(0, 0, PW, PH, stroke=0, fill=1)
-            # Líneas decorativas diagonales tipo CMC
             c.saveState()
             c.setStrokeColor(HexColor('#002B5C'))
             c.setLineWidth(40)
@@ -427,10 +527,14 @@ class CMCProposalGeneratorV3:
         if has_cond_slide:
             bounds = self.SERVICE_COND_TABLE_BOUNDS.get(service_name, (0, 0.53, 0.21, 0.88))
             bl, br, bt, bb = bounds
-            panel_x = img_x + img_w * bl
-            panel_w = img_w * (br - bl)
-            panel_y = img_y + img_h * (1.0 - bb)
-            panel_h_actual = img_h * (bb - bt)
+            if service_name == 'Internet para Eventos':
+                _ix, _iy, _iw, _ih = 0, 0, PW, PH
+            else:
+                _ix, _iy, _iw, _ih = img_x, img_y, img_w, img_h
+            panel_x = _ix + _iw * bl
+            panel_w = _iw * (br - bl)
+            panel_y = _iy + _ih * (1.0 - bb)
+            panel_h_actual = _ih * (bb - bt)
         else:
             panel_x = 0
             panel_w = PW * 0.42
@@ -441,7 +545,7 @@ class CMCProposalGeneratorV3:
         c.setFillColor(self.dark_blue)
         c.rect(panel_x, panel_y, panel_w, panel_h_actual, stroke=0, fill=1)
 
-        # Borde cyan derecho e inferior
+        # Borde cyan
         c.setFillColor(self.cyan)
         c.rect(panel_x + panel_w - 2, panel_y, 2, panel_h_actual, stroke=0, fill=1)
         c.rect(panel_x, panel_y, panel_w, 2, stroke=0, fill=1)
@@ -450,18 +554,19 @@ class CMCProposalGeneratorV3:
         # ── 3. TÍTULO ──────────────────────────────────────────────────────
         y_cursor = panel_y + panel_h_actual - pad
 
-        p_title = Paragraph(service_name, ParagraphStyle(
-            'cond_title', fontName='Helvetica-Bold', fontSize=12,
-            leading=15, textColor=white
-        ))
-        tw, th = p_title.wrap(panel_w - 2 * pad, title_h)
-        p_title.drawOn(c, panel_x + pad, y_cursor - th)
-        y_cursor -= title_h
+        if service_name != 'Internet para Eventos':
+            p_title = Paragraph(service_name, ParagraphStyle(
+                'cond_title', fontName='Helvetica-Bold', fontSize=12,
+                leading=15, textColor=white
+            ))
+            tw, th = p_title.wrap(panel_w - 2 * pad, title_h)
+            p_title.drawOn(c, panel_x + pad, y_cursor - th)
+            y_cursor -= title_h
 
-        # Separador cyan
-        c.setFillColor(self.cyan)
-        c.rect(panel_x + pad, y_cursor - 2, panel_w - 2 * pad, 1.5, stroke=0, fill=1)
-        y_cursor -= sep_h
+            # Separador cyan
+            c.setFillColor(self.cyan)
+            c.rect(panel_x + pad, y_cursor - 2, panel_w - 2 * pad, 1.5, stroke=0, fill=1)
+            y_cursor -= sep_h
 
         # ── 4. FILAS DE LA TABLA ───────────────────────────────────────────
         col_w_label = (panel_w - 2 * pad) * 0.42
