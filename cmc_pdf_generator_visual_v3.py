@@ -44,9 +44,8 @@ class CMCProposalGeneratorV3:
         'Telefonía IP': '05-telefonia-ip-cond.jpg',
         'Telefonía IP / Cloud PBX': '05-telefonia-ip-cond.jpg',
         'Ciberseguridad Integral': '06-ciberseguridad-cond.jpg',
-        # IoT/CCTV no tiene slide de condiciones en el VIP, usar características
-        'Soluciones IoT': '07-iot-cctv.jpg',
-        'CCTV Cableado y redes de WIFI': '07-iot-cctv.jpg',
+        'Soluciones IoT': '07-iot-cctv-cond.jpg',
+        'CCTV Cableado y redes de WIFI': '07-iot-cctv-cond.jpg',
     }
 
 
@@ -327,23 +326,28 @@ class CMCProposalGeneratorV3:
     # Bounds de la tabla nativa en cada slide de condiciones del VIP
     # (left%, right%, top%, bottom%) — medidos y confirmados visualmente
     SERVICE_COND_TABLE_BOUNDS = {
-        'Internet Dedicado':        (0.00,  0.516, 0.21,  0.88),
-        'Internet para Eventos':    (0.04,  0.50,  0.22,  0.72),
-        'Internet Satelital':       (0.00,  0.53,  0.20,  0.888),
-        'Conectividad LTE':         (0.00,  0.527, 0.21,  0.885),
-        'Telefonía IP':             (0.00,  0.54,  0.213, 0.58),
-        'Telefonía IP / Cloud PBX': (0.00,  0.54,  0.213, 0.58),
-        'Ciberseguridad Integral':  (0.00,  0.54,  0.20,  0.88),
+        'Internet Dedicado':             (0.03, 0.52, 0.25, 0.75),
+        'Internet para Eventos':         (0.03, 0.52, 0.25, 0.75),
+        'Internet Satelital':            (0.03, 0.52, 0.25, 0.75),
+        'Conectividad LTE':              (0.03, 0.47, 0.25, 0.75),
+        'Telefonía IP':                  (0.03, 0.52, 0.25, 0.75),
+        'Telefonía IP / Cloud PBX':      (0.03, 0.52, 0.25, 0.75),
+        'Ciberseguridad Integral':       (0.03, 0.52, 0.25, 0.75),
+        'Soluciones IoT':                (0.03, 0.52, 0.25, 0.75),
+        'CCTV Cableado y redes de WIFI': (0.03, 0.52, 0.25, 0.75),
     }
 
     # Servicios que usan slide como fondo para página de condiciones
     SERVICES_WITH_COND_SLIDE = {
         'Internet Dedicado',
+        'Internet para Eventos',
         'Internet Satelital',
         'Conectividad LTE',
         'Telefonía IP',
         'Telefonía IP / Cloud PBX',
         'Ciberseguridad Integral',
+        'Soluciones IoT',
+        'CCTV Cableado y redes de WIFI',
     }
 
     def _draw_eventos_background(self, c):
@@ -491,26 +495,10 @@ class CMCProposalGeneratorV3:
             cond_path = os.path.join(self.images_dir, cond_filename)
             c.setFillColor(self.dark_blue)
             c.rect(0, 0, PW, PH, stroke=0, fill=1)
-            if service_name == 'Internet para Eventos':
-                self._draw_contain_image(c, cond_path, 0, 0, PW, PH)
-            else:
-                img_w = PW * 0.90
-                img_h = PH * 0.90
-                img_x = (PW - img_w) / 2
-                img_y = (PH - img_h) / 2
-                self._draw_stretch_image(c, cond_path, img_x, img_y, img_w, img_h)
-
-            # Tapar tabla nativa — solo para servicios que tienen tabla en el slide VIP
-            # Eventos no tiene tabla nativa, la imagen ya viene limpia
-            if service_name != 'Internet para Eventos':
-                bounds = self.SERVICE_COND_TABLE_BOUNDS.get(service_name, (0, 0.53, 0.21, 0.88))
-                bl, br, bt, bb = bounds
-                cover_x = img_x + img_w * bl
-                cover_w = img_w * (br - bl)
-                cover_y = img_y + img_h * (1.0 - bb)
-                cover_h = img_h * (bb - bt)
-                c.setFillColor(self.dark_blue)
-                c.rect(cover_x, cover_y, cover_w, cover_h, stroke=0, fill=1)
+            # Todas las imágenes pre-recortadas al ratio 11:8.5 — usar 100% página
+            img_w, img_h = PW, PH
+            img_x, img_y = 0, 0
+            self._draw_stretch_image(c, cond_path, img_x, img_y, img_w, img_h)
         else:
             # Fondo azul marino institucional con patrón geométrico
             c.setFillColor(self.dark_blue)
@@ -540,27 +528,32 @@ class CMCProposalGeneratorV3:
                 c.setFont('Helvetica-Bold', 24)
                 c.drawString(PW * 0.04, PH - PH * 0.15, service_name)
 
-        # ── 2. PANEL con tabla — posicionado según bounds calibrados ───────
+        # ── 2. PANEL con tabla — ajustado al tamaño real de la tabla ────────
         if has_cond_slide:
-            bounds = self.SERVICE_COND_TABLE_BOUNDS.get(service_name, (0, 0.53, 0.21, 0.88))
+            bounds = self.SERVICE_COND_TABLE_BOUNDS.get(service_name, (0.03, 0.52, 0.25, 0.75))
             bl, br, bt, bb = bounds
-            if service_name == 'Internet para Eventos':
-                _ix, _iy, _iw, _ih = 0, 0, PW, PH
-            else:
-                _ix, _iy, _iw, _ih = img_x, img_y, img_w, img_h
-            panel_x = _ix + _iw * bl
-            panel_w = _iw * (br - bl)
-            panel_y = _iy + _ih * (1.0 - bb)
-            panel_h_actual = _ih * (bb - bt)
+            # Área disponible en la página
+            area_x = PW * bl
+            area_w = PW * (br - bl)
+            area_y = PH * (1 - bb)
+            area_h = PH * (bb - bt)
+            # Panel usa ancho del área pero altura real de la tabla
+            panel_x = area_x
+            panel_w = area_w
+            panel_h_actual = min(panel_h, area_h)  # no excede el área
+            # Centrado verticalmente dentro del área
+            panel_y = area_y + (area_h - panel_h_actual) / 2.0
         else:
-            panel_x = (PW - PW * 0.42) / 2.0  # centrado
+            panel_x = (PW - PW * 0.42) / 2.0
             panel_w = PW * 0.42
             panel_h_actual = panel_h
             panel_y = (PH - panel_h) / 2.0
 
-        # Fondo del panel
-        c.setFillColor(self.dark_blue)
-        c.rect(panel_x, panel_y, panel_w, panel_h_actual, stroke=0, fill=1)
+        # Fondo del panel — transparente (imagen de fondo ya es el contexto visual)
+        # Solo borde cyan en los 4 lados
+        if not has_cond_slide:
+            c.setFillColor(self.dark_blue)
+            c.rect(panel_x, panel_y, panel_w, panel_h_actual, stroke=0, fill=1)
 
         # 4 bordes cyan iguales
         c.setFillColor(self.cyan)
